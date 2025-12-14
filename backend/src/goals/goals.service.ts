@@ -45,6 +45,35 @@ export class GoalService {
   }
 
   /**
+   * Bulk create multiple goals (optimized for batch insert)
+   * Used by planning service to create ~6 OKRs at once
+   */
+  async createBulk(
+    userId: string,
+    goalsData: CreateGoalDto[],
+  ): Promise<GoalResponseDto[]> {
+    // Validate all goals before creating
+    for (const dto of goalsData) {
+      if (dto.targetDate <= dto.startDate) {
+        throw new BadRequestException('Target date must be after start date');
+      }
+    }
+
+    const goals = goalsData.map((dto) =>
+      this.goalsRepository.create({
+        ...dto,
+        user_id: userId,
+        status: 'NOT_STARTED',
+        progress: 0,
+      }),
+    );
+
+    // Use batch insert for performance
+    const savedGoals = await this.goalsRepository.save(goals);
+    return savedGoals.map((goal) => this.mapToDto(goal));
+  }
+
+  /**
    * Get all goals for a user
    */
   async findByUserId(

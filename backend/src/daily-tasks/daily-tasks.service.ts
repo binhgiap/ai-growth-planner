@@ -38,6 +38,31 @@ export class DailyTaskService {
   }
 
   /**
+   * Bulk create multiple daily tasks (optimized for batch insert)
+   * Used by planning service to create ~180 tasks at once
+   */
+  async createBulk(
+    userId: string,
+    tasksData: CreateDailyTaskDto[],
+  ): Promise<DailyTaskResponseDto[]> {
+    const tasks = tasksData.map((dto) =>
+      this.tasksRepository.create({
+        ...dto,
+        user_id: userId,
+        status: 'TODO',
+        completionPercentage: 0,
+      }),
+    );
+
+    // Use batch insert for performance (much faster than individual saves)
+    const savedTasks = await this.tasksRepository.save(tasks, {
+      chunk: 100, // Save in chunks of 100 to avoid memory issues
+    });
+
+    return savedTasks.map((task) => this.mapToDto(task));
+  }
+
+  /**
    * Get today's tasks for a user
    */
   async getTodaysTasks(userId: string): Promise<DailyTaskResponseDto[]> {
