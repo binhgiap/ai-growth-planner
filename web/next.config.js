@@ -8,6 +8,15 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
   },
+  // Improve build performance
+  typescript: {
+    tsconfigPath: './tsconfig.json',
+  },
+  webpack: {
+    cache: {
+      type: 'filesystem',
+    },
+  },
 }
 
 module.exports = nextConfig
