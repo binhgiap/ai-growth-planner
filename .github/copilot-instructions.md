@@ -21,7 +21,7 @@ The system consists of:
   - Progress Tracking
   - Reports / HR Summary
   - AI Agents
-- Database: PostgreSQL (via Prisma or TypeORM)
+- Database: PostgreSQL (via TypeORM)
 
 ## Frontend (Next.js App Router)
 - Dashboard for 6-month plan
@@ -41,7 +41,7 @@ Follow this folder pattern:
 - `*.service.ts`
 - `*.controller.ts`
 - `/dto/*.dto.ts`
-- `/entities/*.entity.ts` (or prisma schema)
+- `/entities/*.entity.ts`
 - Unit-testable functions
 
 ### Requirements:
@@ -166,13 +166,7 @@ When Copilot generates APIs, they must follow this:
 	•	Mock tests for AI providers
 	•	API integration tests (optional)
 
-# 9. DOCUMENTATION RULES
-### Copilot must help generate:
-	•	JSDoc for all major functions
-	•	Inline documentation for modules
-	•	Readme examples for API usage
-
-# 10. TONE AND VIBE (VERY IMPORTANT)
+# 9. TONE AND VIBE (VERY IMPORTANT)
 ### Copilot should always:
 	•	Code like a senior engineer
 	•	Follow clean, scalable architecture

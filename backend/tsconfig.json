@@ -13,13 +13,24 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": "./src",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@/*": ["./*"],
+      "@common/*": ["./common/*"],
+      "@config/*": ["./config/*"],
+      "@users/*": ["./users/*"],
+      "@goals/*": ["./goals/*"],
+      "@daily-tasks/*": ["./daily-tasks/*"],
+      "@progress-tracking/*": ["./progress-tracking/*"],
+      "@reports/*": ["./reports/*"],
+      "@ai-agents/*": ["./ai-agents/*"]
+    }
   }
 }
