@@ -8,7 +8,8 @@
     ],
     "jsx": "preserve",
     "module": "ESNext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
+    "baseUrl": ".",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "outDir": "./.next/static",
@@ -21,21 +22,7 @@
     "noUncheckedIndexedAccess": true,
     "noPropertyAccessFromIndexSignature": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/components/*": [
-        "./components/*"
-      ],
-      "@/hooks/*": [
-        "./hooks/*"
-      ],
-      "@/lib/*": [
-        "./lib/*"
-      ],
-      "@/app/*": [
-        "./app/*"
-      ]
+      "@/*": ["./*"]
     },
     "allowJs": true,
     "incremental": true,
