@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { User } from '@users/entities/user.entity';
 import { NftMint } from '@nft-cron/entities/nft-mint.entity';
 import {
@@ -273,12 +273,29 @@ export class UserService {
    */
   async getTopNftHolders(limit = 10): Promise<
     {
-      userId: string;
+      id: string;
+      name: string;
       email: string;
-      firstName: string;
-      lastName: string;
-      currentRole: string | null;
+      department: string | null;
+      profile: {
+        role: string | null;
+        currentLevel: string | null;
+        dailyTime: number | null;
+        targetGoal: string | null;
+        targetLevel: string | null;
+      };
+      growthPlan: null;
+      joinedAt: Date;
+      lastActive: Date;
       nftCount: number;
+      nfts: {
+        tokenId: string | null;
+        contractAddress: string;
+        txHash: string;
+        description: string;
+        userInfo: string;
+        mintedAt: Date | null;
+      }[];
     }[]
   > {
     const qb = this.nftMintRepository
@@ -307,13 +324,60 @@ export class UserService {
       nftCount: string;
     }>();
 
-    return rows.map((row) => ({
-      userId: row.userId,
-      email: row.email,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      currentRole: row.currentRole,
-      nftCount: Number(row.nftCount),
-    }));
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const userIds = rows.map((row) => row.userId);
+    const users = await this.usersRepository.find({
+      where: { id: In(userIds), deletedAt: IsNull() },
+      relations: ['nfts'],
+    });
+
+    const usersById = new Map(users.map((u) => [u.id, u]));
+
+    return rows
+      .map((row) => {
+        const user = usersById.get(row.userId);
+        if (!user) {
+          return null;
+        }
+
+        const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+        const currentRole = user.currentRole ?? null;
+        const targetRole = user.targetRole ?? null;
+        const hoursPerWeek = user.hoursPerWeek ?? null;
+
+        const nfts =
+          (user.nfts || []).map((nft) => ({
+            tokenId: nft.tokenId,
+            contractAddress: nft.contractAddress,
+            txHash: nft.txHash,
+            description: nft.description,
+            userInfo: nft.userInfo,
+            mintedAt: nft.mintedAt,
+          })) ?? [];
+
+        return {
+          id: user.id,
+          name,
+          email: user.email,
+          department: currentRole,
+          profile: {
+            role: currentRole,
+            currentLevel: currentRole,
+            dailyTime:
+              typeof hoursPerWeek === 'number' ? hoursPerWeek / 7 : null,
+            targetGoal: targetRole,
+            targetLevel: targetRole,
+          },
+          growthPlan: null,
+          joinedAt: user.createdAt,
+          lastActive: user.createdAt,
+          nftCount: Number(row.nftCount),
+          nfts,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   }
 }
