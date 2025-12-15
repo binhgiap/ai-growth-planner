@@ -43,12 +43,24 @@ async function bootstrap() {
       'REST API for AI Growth Planner - A platform that generates personalized 6-month development roadmaps for employees using multi-agent AI workflow',
     )
     .setVersion('1.0.0')
+    .addTag('auth', 'Authentication')
     .addTag('users', 'User profile management')
     .addTag('goals', 'Goal/OKR management')
     .addTag('daily-tasks', 'Daily task management')
     .addTag('progress-tracking', 'Progress tracking and monitoring')
     .addTag('reports', 'HR reports and evaluations')
     .addTag('planning', 'AI planning and roadmap generation')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
