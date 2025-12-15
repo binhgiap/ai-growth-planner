@@ -295,7 +295,7 @@ export class UserService {
       .addGroupBy('user.firstName')
       .addGroupBy('user.lastName')
       .addGroupBy('user.currentRole')
-      .orderBy('nftCount', 'DESC')
+      .orderBy('COUNT(nft.id)', 'DESC')
       .limit(limit);
 
     const rows = await qb.getRawMany<{
