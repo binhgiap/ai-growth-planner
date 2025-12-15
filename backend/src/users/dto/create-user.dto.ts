@@ -164,6 +164,14 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: '0x1234567890123456789012345678901234567890',
+    description: 'User wallet address used for NFT minting',
+  })
+  @IsString()
+  @IsOptional()
+  walletAddress?: string;
 }
 
 export class UserResponseDto {

@@ -31,6 +31,9 @@ export class Goal {
   @Column({ type: 'varchar', length: 50, default: 'NOT_STARTED' })
   status: string; // 'NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'ABANDONED'
 
+  @Column({ type: 'boolean', default: false })
+  isMintedNft: boolean;
+
   @Column({ type: 'timestamp' })
   startDate: Date;
 

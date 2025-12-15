@@ -103,7 +103,7 @@ export class UserController {
   }
 
   /**
-   * GET /users/profile/:id - Get user profile with related data
+   * GET /users/profile/:id - Get user profile with related data, including NFTs
    */
   @Get('profile/:id')
   @UseGuards(JwtAuthGuard)
@@ -123,6 +123,23 @@ export class UserController {
     return {
       success: true,
       data: profile,
+    };
+  }
+
+  /**
+   * GET /users/top-nft-holders - Get top users by number of NFTs owned
+   */
+  @Get('top-nft-holders')
+  @ApiOperation({ summary: 'Get top NFT holders leaderboard' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top NFT holders retrieved successfully',
+  })
+  async getTopNftHolders() {
+    const data = await this.userService.getTopNftHolders(10);
+    return {
+      success: true,
+      data,
     };
   }
 

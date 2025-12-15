@@ -14,6 +14,7 @@ import { ProgressTrackingModule } from './progress-tracking/progress-tracking.mo
 import { ReportsModule } from './reports/reports.module';
 import { AIAgentsModule } from './ai-agents/ai-agents.module';
 import { PlanningModule } from './planning/planning.module';
+import { NftCronModule } from './nft-cron/nft-cron.module';
 
 // Entities
 import { User } from './users/entities/user.entity';
@@ -21,6 +22,8 @@ import { Goal } from './goals/entities/goal.entity';
 import { DailyTask } from './daily-tasks/entities/daily-task.entity';
 import { ProgressLog } from './progress-tracking/entities/progress-log.entity';
 import { Report } from './reports/entities/report.entity';
+import { NftMint } from './nft-cron/entities/nft-mint.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -30,9 +33,10 @@ import { Report } from './reports/entities/report.entity';
     }),
     TypeOrmModule.forRoot({
       ...typeOrmConfig,
-      entities: [User, Goal, DailyTask, ProgressLog, Report],
+      entities: [User, Goal, DailyTask, ProgressLog, Report, NftMint],
     }),
     AuthModule,
+    ScheduleModule.forRoot(),
     UsersModule,
     GoalsModule,
     DailyTasksModule,
@@ -40,6 +44,7 @@ import { Report } from './reports/entities/report.entity';
     ReportsModule,
     AIAgentsModule,
     PlanningModule,
+    NftCronModule,
   ],
   controllers: [AppController],
   providers: [AppService],

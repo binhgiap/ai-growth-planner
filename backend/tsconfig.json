@@ -31,7 +31,8 @@
       "@daily-tasks/*": ["./daily-tasks/*"],
       "@progress-tracking/*": ["./progress-tracking/*"],
       "@reports/*": ["./reports/*"],
-      "@ai-agents/*": ["./ai-agents/*"]
+      "@ai-agents/*": ["./ai-agents/*"],
+      "@nft-cron/*": ["./nft-cron/*"]
     }
   }
 }

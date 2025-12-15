@@ -147,6 +147,26 @@ export class GoalService {
   }
 
   /**
+   * Get goals that are COMPLETED and not yet minted as NFT
+   */
+  async findCompletedNotMinted(userId?: string): Promise<GoalResponseDto[]> {
+    const query = this.goalsRepository
+      .createQueryBuilder('goal')
+      .where('goal.status = :status', { status: 'COMPLETED' })
+      .andWhere('goal.isMintedNft = :minted', { minted: false })
+      .andWhere('goal.deletedAt IS NULL');
+
+    if (userId) {
+      query.andWhere('goal.user_id = :userId', { userId });
+    }
+
+    query.orderBy('goal.priority', 'ASC');
+
+    const goals = await query.getMany();
+    return goals.map((goal) => this.mapToDto(goal));
+  }
+
+  /**
    * Map Goal entity to DTO
    */
   private mapToDto(goal: Goal): GoalResponseDto {

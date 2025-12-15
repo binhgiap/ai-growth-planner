@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { User } from '@users/entities/user.entity';
+import { NftMint } from '@nft-cron/entities/nft-mint.entity';
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -21,6 +22,8 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(NftMint)
+    private nftMintRepository: Repository<NftMint>,
   ) {}
 
   /**
@@ -198,7 +201,7 @@ export class UserService {
   async getUserProfile(id: string): Promise<any> {
     const user = await this.usersRepository.findOne({
       where: { id, deletedAt: IsNull() },
-      relations: ['goals', 'dailyTasks', 'progressLogs'],
+      relations: ['goals', 'dailyTasks', 'progressLogs', 'nfts'],
     });
 
     if (!user) {
@@ -210,6 +213,21 @@ export class UserService {
       goals: user.goals || [],
       tasksCount: (user.dailyTasks || []).length,
       progressLogs: user.progressLogs || [],
+      nfts: (user.nfts || [])
+        .sort((a, b) => {
+          if (!a.mintedAt && !b.mintedAt) return 0;
+          if (!a.mintedAt) return 1;
+          if (!b.mintedAt) return -1;
+          return b.mintedAt.getTime() - a.mintedAt.getTime();
+        })
+        .map((nft) => ({
+          tokenId: nft.tokenId,
+          contractAddress: nft.contractAddress,
+          txHash: nft.txHash,
+          description: nft.description,
+          userInfo: nft.userInfo,
+          mintedAt: nft.mintedAt,
+        })),
     };
   }
 
@@ -247,5 +265,55 @@ export class UserService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
+  }
+
+  /**
+   * Get the top users by number of NFTs owned.
+   * Used for the NFT holder leaderboard.
+   */
+  async getTopNftHolders(limit = 10): Promise<
+    {
+      userId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      currentRole: string | null;
+      nftCount: number;
+    }[]
+  > {
+    const qb = this.nftMintRepository
+      .createQueryBuilder('nft')
+      .innerJoin('nft.user', 'user')
+      .select('user.id', 'userId')
+      .addSelect('user.email', 'email')
+      .addSelect('user.firstName', 'firstName')
+      .addSelect('user.lastName', 'lastName')
+      .addSelect('user.currentRole', 'currentRole')
+      .addSelect('COUNT(nft.id)', 'nftCount')
+      .groupBy('user.id')
+      .addGroupBy('user.email')
+      .addGroupBy('user.firstName')
+      .addGroupBy('user.lastName')
+      .addGroupBy('user.currentRole')
+      .orderBy('nftCount', 'DESC')
+      .limit(limit);
+
+    const rows = await qb.getRawMany<{
+      userId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      currentRole: string | null;
+      nftCount: string;
+    }>();
+
+    return rows.map((row) => ({
+      userId: row.userId,
+      email: row.email,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      currentRole: row.currentRole,
+      nftCount: Number(row.nftCount),
+    }));
   }
 }

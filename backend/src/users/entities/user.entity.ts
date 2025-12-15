@@ -10,6 +10,7 @@ import { Goal } from '@goals/entities/goal.entity';
 import { DailyTask } from '@daily-tasks/entities/daily-task.entity';
 import { ProgressLog } from '@progress-tracking/entities/progress-log.entity';
 import { Report } from '@reports/entities/report.entity';
+import { NftMint } from '@nft-cron/entities/nft-mint.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -43,6 +44,13 @@ export class User {
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  /**
+   * Optional wallet address used for NFT minting.
+   * If not provided, the user will be skipped by the NFT cron job.
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  walletAddress: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   currentRole: string;
@@ -86,4 +94,7 @@ export class User {
 
   @OneToMany(() => Report, (report) => report.user)
   reports: Report[];
+
+  @OneToMany(() => NftMint, (nft: NftMint) => nft.user)
+  nfts: NftMint[];
 }

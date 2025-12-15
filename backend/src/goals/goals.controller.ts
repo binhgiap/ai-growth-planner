@@ -218,4 +218,34 @@ export class GoalController {
       message: 'Goal deleted successfully',
     };
   }
+
+  /**
+   * GET /goals/completed/unminted - Get COMPLETED goals that have not been minted as NFT
+   *
+   * This endpoint is mainly for the NFT cron job to know which goals
+   * still need an NFT to be minted for them.
+   */
+  @Get('completed/unminted')
+  @ApiOperation({
+    summary:
+      'Get COMPLETED goals that have not been minted as NFT (isMintedNft = false)',
+  })
+  @ApiQuery({
+    name: 'userId',
+    type: 'string',
+    required: false,
+    description: 'Optional user ID to filter by user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Completed and unminted goals retrieved successfully',
+  })
+  async getCompletedUnminted(@Query('userId') userId?: string) {
+    const goals = await this.goalService.findCompletedNotMinted(userId);
+    return {
+      success: true,
+      data: goals,
+      count: goals.length,
+    };
+  }
 }

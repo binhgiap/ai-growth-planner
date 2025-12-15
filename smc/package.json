@@ -1,0 +1,40 @@
+{
+  "name": "hardhat-typescript-project",
+  "version": "1.0.0",
+  "description": "Hardhat project with TypeScript and OpenZeppelin",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.ts",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:hedera": "hardhat run scripts/deploy.ts --network hederaTestnet",
+    "deploy:hedera:mainnet": "hardhat run scripts/deploy.ts --network hederaMainnet",
+    "verify": "hardhat verify",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [
+    "hardhat",
+    "hedera",
+    "smart-contracts",
+    "typescript",
+    "erc721",
+    "nft"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@typechain/hardhat": "^9.0.0",
+    "dotenv": "^17.2.3",
+    "hardhat": "^2.19.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}
