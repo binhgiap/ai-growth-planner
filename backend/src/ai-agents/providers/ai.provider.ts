@@ -266,7 +266,7 @@ export class AIProvider {
       }
       // Log the full error response if it's an axios error
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as any;
+        const axiosError = error;
         this.logger.error(`Status: ${axiosError.response?.status}`);
         this.logger.error(`Data: ${JSON.stringify(axiosError.response?.data)}`);
       }
@@ -311,7 +311,7 @@ export class AIProvider {
       }
       // Log the full error response if it's an axios error
       if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as any;
+        const axiosError = error;
         this.logger.error(`Status: ${axiosError.response?.status}`);
         this.logger.error(`Data: ${JSON.stringify(axiosError.response?.data)}`);
         this.logger.error(

@@ -1,9 +1,24 @@
-import { Controller, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Body,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PlanningService } from './planning.service';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 
 /**
- * PlanningController handles the main planning workflow
+ * PlanningController handles the three-step planning workflow
  * Base path: /planning
  */
 @ApiTags('planning')
@@ -12,49 +27,33 @@ export class PlanningController {
   constructor(private readonly planningService: PlanningService) {}
 
   /**
-   * POST /planning/generate - Generate complete 6-month plan for a user
+   * POST /planning/skill-gap - Analyze skill gaps and save to database
    */
-  @Post('generate')
+  @Post('skill-gap')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Generate a complete 6-month development plan',
+    summary: 'Analyze skill gaps for user',
     description:
-      'Orchestrates all AI agents to generate a comprehensive 6-month roadmap including skill gap analysis, goals (OKRs), and daily tasks',
+      'Analyzes the gap between current and target skills using SkillGapAgent and saves the analysis to the database',
   })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 201,
-    description: '6-month development plan generated successfully',
+    description: 'Skill gap analysis completed and saved',
     schema: {
       example: {
         success: true,
         data: {
-          skillGap: {
-            currentLevel: 'Intermediate',
-            targetLevel: 'Advanced',
-            gaps: ['System Design', 'Leadership'],
-          },
-          goals: [
-            {
-              title: 'Master System Design',
-              type: 'OBJECTIVE',
-              keyResults: ['Design 3 large-scale systems'],
-            },
-          ],
-          dailyTasks: [
-            {
-              date: '2024-01-01',
-              tasks: [
-                {
-                  title: 'Read system design case study',
-                  duration: 2,
-                  priority: 'HIGH',
-                },
-              ],
-            },
-          ],
+          userId: 'uuid',
+          currentLevel: 'Intermediate',
+          targetLevel: 'Advanced',
+          gaps: ['System Design', 'Leadership'],
+          gapCount: 2,
+          priority: 'HIGH',
+          createdAt: '2024-01-01T00:00:00.000Z',
         },
-        message: '6-month development plan generated successfully',
+        message: 'Skill gap analysis completed and saved successfully',
       },
     },
   })
@@ -63,63 +62,133 @@ export class PlanningController {
     description: 'User profile incomplete or invalid',
   })
   @ApiResponse({
-    status: 500,
-    description: 'Error generating plan from AI agents',
+    status: 401,
+    description: 'Unauthorized',
   })
-  async generatePlan(@Query('userId') userId: string) {
-    const plan = await this.planningService.generateCompletePlan(userId);
+  @ApiResponse({
+    status: 500,
+    description: 'Error analyzing skill gaps',
+  })
+  async analyzeSkillGap(@CurrentUser() user: JwtPayload) {
+    const result = await this.planningService.analyzeAndSaveSkillGap(user.id);
     return {
       success: true,
-      data: plan,
-      message: '6-month development plan generated successfully',
+      data: result,
+      message: 'Skill gap analysis completed and saved successfully',
     };
   }
 
   /**
-   * POST /planning/persist - Save generated plan to database
+   * POST /planning/goal-planning - Generate OKRs and save to database
    */
-  @Post('persist')
+  @Post('goal-planning')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Persist/save the generated plan to database',
+    summary: 'Generate OKRs for 6-month planning',
     description:
-      'Saves the generated 6-month plan along with all goals and tasks to the database',
-  })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
-  @ApiQuery({
-    name: 'plan',
-    type: 'object',
-    description: 'The generated plan object',
+      'Generates 6-month OKRs based on skill gaps using GoalPlannerAgent and saves them to the database',
   })
   @ApiResponse({
     status: 201,
-    description: 'Plan saved to database successfully',
+    description: 'OKRs generated and saved successfully',
     schema: {
       example: {
         success: true,
         data: {
           userId: 'uuid',
           goalsCreated: 6,
-          tasksCreated: 180,
+          okrs: [
+            {
+              id: 'uuid',
+              objective: 'Master System Design',
+              keyResults: ['Design 3 large-scale systems'],
+              timeline: '6 months',
+            },
+          ],
           createdAt: '2024-01-01T00:00:00.000Z',
         },
-        message: 'Plan saved to database successfully',
+        message: 'OKRs generated and saved successfully',
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid plan format or user not found',
+    description: 'Skill gap analysis not found or invalid',
   })
-  async persistPlan(
-    @Query('userId') userId: string,
-    @Query('plan') plan: Record<string, unknown>,
-  ) {
-    const result = await this.planningService.persistPlan(userId, plan);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error generating OKRs',
+  })
+  async generateGoalPlanning(@CurrentUser() user: JwtPayload) {
+    const result = await this.planningService.generateAndSaveOKRs(user.id);
     return {
       success: true,
       data: result,
-      message: 'Plan saved to database successfully',
+      message: 'OKRs generated and saved successfully',
+    };
+  }
+
+  /**
+   * POST /planning/daily-task - Generate 180 daily tasks and save to database
+   */
+  @Post('daily-task')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Generate 180 daily tasks for 6-month plan',
+    description:
+      'Generates 180 daily tasks based on OKRs using DailyTaskAgent and saves them to the database',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Daily tasks generated and saved successfully',
+    schema: {
+      example: {
+        success: true,
+        data: {
+          userId: 'uuid',
+          tasksCreated: 180,
+          taskSummary: {
+            highPriority: 45,
+            mediumPriority: 90,
+            lowPriority: 45,
+            totalEstimatedHours: 540,
+          },
+          startDate: '2024-01-01',
+          endDate: '2024-06-30',
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+        message: 'Daily tasks generated and saved successfully',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'OKRs not found or invalid',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error generating daily tasks',
+  })
+  async generateDailyTasks(@CurrentUser() user: JwtPayload) {
+    const result = await this.planningService.generateAndSaveDailyTasks(
+      user.id,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Daily tasks generated and saved successfully',
     };
   }
 }

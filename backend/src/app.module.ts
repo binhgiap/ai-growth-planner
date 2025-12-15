@@ -15,6 +15,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AIAgentsModule } from './ai-agents/ai-agents.module';
 import { PlanningModule } from './planning/planning.module';
 import { NftCronModule } from './nft-cron/nft-cron.module';
+import { SkillGapModule } from './skill-gap/skill-gap.module';
 
 // Entities
 import { User } from './users/entities/user.entity';
@@ -24,6 +25,7 @@ import { ProgressLog } from './progress-tracking/entities/progress-log.entity';
 import { Report } from './reports/entities/report.entity';
 import { NftMint } from './nft-cron/entities/nft-mint.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SkillGap } from './skill-gap/skill-gap.entity';
 
 @Module({
   imports: [
@@ -33,7 +35,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
     TypeOrmModule.forRoot({
       ...typeOrmConfig,
-      entities: [User, Goal, DailyTask, ProgressLog, Report, NftMint],
+      entities: [User, Goal, DailyTask, ProgressLog, Report, NftMint, SkillGap],
     }),
     AuthModule,
     ScheduleModule.forRoot(),
@@ -45,6 +47,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AIAgentsModule,
     PlanningModule,
     NftCronModule,
+    SkillGapModule,
   ],
   controllers: [AppController],
   providers: [AppService],
