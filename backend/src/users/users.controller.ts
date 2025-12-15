@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,13 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UserService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/create-user.dto';
+import { JwtAuthGuard, RolesGuard } from '@auth/guards/auth.guard';
+import { Roles } from '@auth/decorators/roles.decorator';
+import { UserRole } from '@users/entities/user.entity';
 
 /**
  * UserController handles HTTP requests for user management
@@ -31,35 +36,26 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   /**
-   * POST /users - Create a new user
+   * POST /users - Create a new user (admin only)
    */
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create a new user' })
+  @ApiOperation({ summary: 'Create a new user (Admin only)' })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({
     status: 201,
     description: 'User created successfully',
-    schema: {
-      example: {
-        success: true,
-        data: {
-          id: 'uuid',
-          email: 'user@example.com',
-          firstName: 'John',
-          lastName: 'Doe',
-          currentRole: 'Software Engineer',
-          targetRole: 'Senior Engineer',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-        },
-        message: 'User created successfully',
-      },
-    },
   })
   @ApiResponse({
-    status: 400,
-    description: 'Invalid input data',
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
   })
   async create(@Body() createUserDto: CreateUserDto) {
     const user = await this.userService.create(createUserDto);
@@ -71,34 +67,26 @@ export class UserController {
   }
 
   /**
-   * GET /users - Get all users with pagination
+   * GET /users - Get all users with pagination (admin only)
    */
   @Get()
-  @ApiOperation({ summary: 'Get all users with pagination' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all users with pagination (Admin only)' })
   @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
   @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   @ApiResponse({
     status: 200,
     description: 'Users retrieved successfully',
-    schema: {
-      example: {
-        success: true,
-        data: [
-          {
-            id: 'uuid',
-            email: 'user@example.com',
-            firstName: 'John',
-            lastName: 'Doe',
-          },
-        ],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 100,
-          totalPages: 10,
-        },
-      },
-    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
   })
   async findAll(@Query('page') page = 1, @Query('limit') limit = 10) {
     const result = await this.userService.findAll(page, limit);
@@ -118,6 +106,8 @@ export class UserController {
    * GET /users/profile/:id - Get user profile with related data
    */
   @Get('profile/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user profile with related data' })
   @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
   @ApiResponse({
@@ -132,7 +122,7 @@ export class UserController {
     const profile = await this.userService.getUserProfile(id);
     return {
       success: true,
-      data: profile as unknown,
+      data: profile,
     };
   }
 
@@ -140,6 +130,8 @@ export class UserController {
    * GET /users/:id - Get user by ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user by ID' })
   @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
   @ApiResponse({
@@ -151,10 +143,10 @@ export class UserController {
     description: 'User not found',
   })
   async findById(@Param('id') id: string) {
-    const user = await this.userService.findById(id);
+    const user = await this.userService.findByIdDto(id);
     return {
       success: true,
-      data: user as unknown,
+      data: user,
     };
   }
 
@@ -162,6 +154,8 @@ export class UserController {
    * PATCH /users/:id - Update user
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user information' })
   @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
   @ApiBody({ type: UpdateUserDto })
@@ -183,11 +177,14 @@ export class UserController {
   }
 
   /**
-   * DELETE /users/:id - Soft delete user
+   * DELETE /users/:id - Soft delete user (admin only)
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete user (soft delete)' })
+  @ApiOperation({ summary: 'Delete user (Admin only, soft delete)' })
   @ApiParam({ name: 'id', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 204,

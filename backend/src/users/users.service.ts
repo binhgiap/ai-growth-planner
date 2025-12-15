@@ -67,9 +67,20 @@ export class UserService {
   }
 
   /**
-   * Get user by ID
+   * Get user by ID (returns full entity)
    */
-  async findById(id: string): Promise<UserResponseDto> {
+  async findById(id: string): Promise<User | null> {
+    const user = await this.usersRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
+
+    return user || null;
+  }
+
+  /**
+   * Get user profile DTO by ID
+   */
+  async findByIdDto(id: string): Promise<UserResponseDto> {
     const user = await this.usersRepository.findOne({
       where: { id, deletedAt: IsNull() },
       relations: ['goals', 'dailyTasks', 'progressLogs', 'reports'],
@@ -83,18 +94,64 @@ export class UserService {
   }
 
   /**
-   * Get user by email
+   * Get user by email (returns full entity with password for auth)
    */
-  async findByEmail(email: string): Promise<UserResponseDto> {
+  async findByEmail(email: string): Promise<User | null> {
     const user = await this.usersRepository.findOne({
       where: { email, deletedAt: IsNull() },
     });
 
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+    return user || null;
+  }
+
+  /**
+   * Create a new user with password (for auth)
+   */
+  async createWithPassword(userData: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    currentRole?: string;
+    targetRole?: string;
+  }): Promise<User> {
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: userData.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('User with this email already exists');
     }
 
-    return this.mapToDto(user);
+    const user = this.usersRepository.create({
+      email: userData.email,
+      password: userData.password,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      currentRole: userData.currentRole,
+      targetRole: userData.targetRole,
+      skills: [],
+      targetSkills: [],
+      hoursPerWeek: 40,
+    });
+
+    return this.usersRepository.save(user);
+  }
+
+  /**
+   * Update password
+   */
+  async updatePassword(id: string, hashedPassword: string): Promise<void> {
+    const user = await this.usersRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    user.password = hashedPassword;
+    await this.usersRepository.save(user);
   }
 
   /**
@@ -154,6 +211,22 @@ export class UserService {
       tasksCount: (user.dailyTasks || []).length,
       progressLogs: user.progressLogs || [],
     };
+  }
+
+  /**
+   * Get user profile (DTO)
+   */
+  async getUserProfileDto(id: string): Promise<UserResponseDto> {
+    const user = await this.usersRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+      relations: ['goals', 'dailyTasks', 'progressLogs', 'reports'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+
+    return this.mapToDto(user);
   }
 
   /**

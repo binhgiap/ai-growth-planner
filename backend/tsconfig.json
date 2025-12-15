@@ -23,6 +23,7 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["./*"],
+      "@auth/*": ["./auth/*"],
       "@common/*": ["./common/*"],
       "@config/*": ["./config/*"],
       "@users/*": ["./users/*"],

@@ -7,6 +7,7 @@ import { typeOrmConfig } from './config/typeorm.config';
 
 // Modules
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 import { GoalsModule } from './goals/goals.module';
 import { DailyTasksModule } from './daily-tasks/daily-tasks.module';
 import { ProgressTrackingModule } from './progress-tracking/progress-tracking.module';
@@ -31,6 +32,7 @@ import { Report } from './reports/entities/report.entity';
       ...typeOrmConfig,
       entities: [User, Goal, DailyTask, ProgressLog, Report],
     }),
+    AuthModule,
     UsersModule,
     GoalsModule,
     DailyTasksModule,

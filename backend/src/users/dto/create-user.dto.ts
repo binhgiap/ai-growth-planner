@@ -4,8 +4,11 @@ import {
   IsArray,
   IsNumber,
   IsOptional,
+  IsEnum,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserRole } from '@users/entities/user.entity';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -144,6 +147,23 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   bio?: string;
+
+  @ApiPropertyOptional({
+    enum: UserRole,
+    example: UserRole.USER,
+    description: 'User role (admin or user)',
+  })
+  @IsEnum(UserRole)
+  @IsOptional()
+  role?: UserRole;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'User account status',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }
 
 export class UserResponseDto {

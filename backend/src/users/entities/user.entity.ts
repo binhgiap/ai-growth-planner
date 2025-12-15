@@ -11,6 +11,12 @@ import { DailyTask } from '@daily-tasks/entities/daily-task.entity';
 import { ProgressLog } from '@progress-tracking/entities/progress-log.entity';
 import { Report } from '@reports/entities/report.entity';
 
+export enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  MANAGER = 'manager',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -20,10 +26,23 @@ export class User {
   email: string;
 
   @Column({ type: 'varchar', length: 255 })
+  password: string;
+
+  @Column({ type: 'varchar', length: 255 })
   firstName: string;
 
   @Column({ type: 'varchar', length: 255 })
   lastName: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.USER,
+  })
+  role: UserRole;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   currentRole: string;

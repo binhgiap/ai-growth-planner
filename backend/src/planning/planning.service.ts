@@ -24,6 +24,10 @@ export class PlanningService {
     // Get user profile
     const user = await this.userService.findById(userId);
 
+    if (!user) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+
     // Generate development plan through AI agents
     const plan = await this.agentOrchestrationService.generateDevelopmentPlan({
       id: userId,
