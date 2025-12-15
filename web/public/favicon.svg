@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background with rounded corners and gradient -->
+  <rect width="64" height="64" rx="14" fill="url(#gradient)"/>
+  
+  <!-- Main upward trending line representing growth -->
+  <path d="M16 48 L28 36 L36 40 L44 24" 
+        stroke="white" 
+        stroke-width="4.5" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Arrow head pointing upward -->
+  <path d="M44 24 L38 18 L44 18 Z" 
+        fill="white"/>
+  
+  <!-- AI/Sparkle indicator at top right -->
+  <g transform="translate(50, 16)">
+    <circle cx="0" cy="0" r="2.5" fill="white" opacity="1"/>
+    <path d="M0 -4 L0.8 0 L0 4 L-0.8 0 Z" fill="white" opacity="0.9"/>
+    <path d="M-4 0 L0 0.8 L4 0 L0 -0.8 Z" fill="white" opacity="0.9"/>
+  </g>
+  
+  <!-- Gradient definition matching website primary colors -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(160, 84%, 39%);stop-opacity:1" />
+      <stop offset="100%" style="stop-color:hsl(199, 89%, 48%);stop-opacity:1" />
+    </linearGradient>
+  </defs>
+</svg>
