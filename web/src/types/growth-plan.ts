@@ -54,7 +54,7 @@ export interface GrowthPlan {
 
 export interface AgentStatus {
   name: string;
-  status: 'idle' | 'processing' | 'complete';
+  status: 'idle' | 'processing' | 'complete' | 'error';
   progress: number;
   output?: string;
 }

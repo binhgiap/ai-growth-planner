@@ -10,6 +10,7 @@ interface AgentProcessingProps {
   onComplete: () => void;
   error?: string | null;
   onRetry?: () => void;
+  onError?: (error: string, agentId: string) => void;
 }
 
 const agents: { id: string; name: string; icon: React.ElementType; description: string; color: string }[] = [
@@ -50,7 +51,7 @@ const agents: { id: string; name: string; icon: React.ElementType; description: 
   },
 ];
 
-export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingProps) => {
+export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentProcessingProps) => {
   const [currentAgent, setCurrentAgent] = useState(0);
   const [statuses, setStatuses] = useState<Record<string, AgentStatus>>(
     agents.reduce((acc, agent) => ({
@@ -74,87 +75,147 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
         [agent.id]: { ...prev[agent.id], status: "processing", progress: 0 },
       }));
 
-      // Best-effort API integration per agent (non-blocking for UI)
-      try {
-        const userStr = localStorage.getItem("user");
-        const user = userStr ? JSON.parse(userStr) : null;
-        const userId: string | undefined = user?.id;
+      let apiError: Error | null = null;
 
-        if (userId) {
-          if (agent.id === "skill-gap") {
-            // Skill Gap Agent -> generate overall 6-month development plan
-            void planningApi.generatePlan(userId);
-          } else if (agent.id === "goal-planning") {
-            // Goal Planning Agent -> create a sample OBJECTIVE goal
-            void goalsApi.create(userId, {
-              title: "Master System Design",
-              description: "Learn and implement large-scale system design patterns",
-              type: "OBJECTIVE",
-              startDate: "2024-01-01",
-              targetDate: "2024-06-30",
-              priority: 1,
-              notes: "Focus on distributed systems and microservices",
-            });
-          } else if (agent.id === "daily-breakdown") {
-            // Daily Breakdown Agent -> create a sample daily task
-            void tasksApi.create(userId, {
-              title: "Read system design chapter 3",
-              description: "Focus on distributed transactions and consistency models",
-              dueDate: "2024-01-15",
-              priority: 1,
-              estimatedHours: 2,
-              goalId: "goal-uuid-123",
-              notes: "Use Notion for note-taking",
-            });
-          } else if (agent.id === "progress-tracker") {
-            // Progress Tracker Agent -> create a sample weekly progress log
-            void progressApi.create(userId, {
-              period: "WEEKLY",
-              periodStartDate: "2024-01-08",
-              periodEndDate: "2024-01-14",
-              tasksCompleted: 12,
-              tasksTotal: 15,
-              completionPercentage: 80,
-              goalsProgress: 75.5,
-              skillsImproved: 3,
-              summary:
-                "Strong progress on system design. Completed 4 major topics. On track with all goals.",
-            });
-          } else if (agent.id === "hr-summary") {
-            // HR Summary Agent -> create a sample monthly report
-            void reportsApi.create(userId, {
-              type: "MONTHLY",
-              reportPeriodStart: "2024-01-01",
-              reportPeriodEnd: "2024-01-31",
-              title: "January 2024 Progress Review",
-            });
+      // Handle the first 3 planning APIs sequentially
+      try {
+        if (agent.id === "skill-gap") {
+          // Step 1: Analyze skill gaps
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { ...prev[agent.id], progress: 20 },
+          }));
+
+          const response = await planningApi.analyzeSkillGap();
+          
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { 
+              ...prev[agent.id], 
+              progress: 80,
+              output: `Found ${response.data.gapCount} skill gaps: ${response.data.gaps.slice(0, 3).join(", ")}${response.data.gaps.length > 3 ? "..." : ""}`
+            },
+          }));
+
+        } else if (agent.id === "goal-planning") {
+          // Step 2: Generate OKRs (requires skill gap analysis to be completed first)
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { ...prev[agent.id], progress: 20 },
+          }));
+
+          const response = await planningApi.generateGoalPlanning();
+          
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { 
+              ...prev[agent.id], 
+              progress: 80,
+              output: `Generated ${response.data.goalsCreated} OKRs for 6-month plan`
+            },
+          }));
+
+        } else if (agent.id === "daily-breakdown") {
+          // Step 3: Generate daily tasks (requires OKRs to be completed first)
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { ...prev[agent.id], progress: 20 },
+          }));
+
+          const response = await planningApi.generateDailyTasks();
+          
+          setStatuses((prev) => ({
+            ...prev,
+            [agent.id]: { 
+              ...prev[agent.id], 
+              progress: 80,
+              output: `Generated ${response.data.tasksCreated} daily tasks (${response.data.taskSummary.highPriority} high, ${response.data.taskSummary.mediumPriority} medium, ${response.data.taskSummary.lowPriority} low priority)`
+            },
+          }));
+
+        } else {
+          // Legacy agents (progress-tracker, hr-summary) - keep existing behavior
+          const userStr = localStorage.getItem("user");
+          const user = userStr ? JSON.parse(userStr) : null;
+          const userId: string | undefined = user?.id;
+
+          if (userId) {
+            if (agent.id === "progress-tracker") {
+              // Progress Tracker Agent -> create a sample weekly progress log
+              void progressApi.create(userId, {
+                period: "WEEKLY",
+                periodStartDate: "2024-01-08",
+                periodEndDate: "2024-01-14",
+                tasksCompleted: 12,
+                tasksTotal: 15,
+                completionPercentage: 80,
+                goalsProgress: 75.5,
+                skillsImproved: 3,
+                summary:
+                  "Strong progress on system design. Completed 4 major topics. On track with all goals.",
+              });
+            } else if (agent.id === "hr-summary") {
+              // HR Summary Agent -> create a sample monthly report
+              void reportsApi.create(userId, {
+                type: "MONTHLY",
+                reportPeriodStart: "2024-01-01",
+                reportPeriodEnd: "2024-01-31",
+                title: "January 2024 Progress Review",
+              });
+            }
+          }
+
+          // Simulate progress for legacy agents (UI only)
+          for (let i = 20; i <= 100; i += 20) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            setStatuses((prev) => ({
+              ...prev,
+              [agent.id]: { ...prev[agent.id], progress: i },
+            }));
           }
         }
       } catch (e) {
-        console.error("Agent API call failed:", e);
-      }
-
-      // Simulate progress (UI only)
-      for (let i = 0; i <= 100; i += 10) {
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        console.error(`Agent ${agent.id} API call failed:`, e);
+        apiError = e instanceof Error ? e : new Error(String(e));
+        const errorMessage = apiError?.message || "An error occurred";
+        
+        // Update status to show error
         setStatuses((prev) => ({
           ...prev,
-          [agent.id]: { ...prev[agent.id], progress: i },
+          [agent.id]: { 
+            ...prev[agent.id], 
+            status: "error",
+            progress: 0,
+            output: errorMessage
+          },
         }));
+
+        // Notify parent component of the error
+        if (onError) {
+          onError(errorMessage, agent.id);
+        }
+
+        // Stop processing if it's one of the first 3 critical steps
+        if (["skill-gap", "goal-planning", "daily-breakdown"].includes(agent.id)) {
+          // Don't proceed to next agent if a critical step failed
+          return;
+        }
       }
 
-      // Complete
-      setStatuses((prev) => ({
-        ...prev,
-        [agent.id]: { ...prev[agent.id], status: "complete", progress: 100 },
-      }));
+      // Complete the step (if no error or if it's a legacy agent)
+      if (!apiError || !["skill-gap", "goal-planning", "daily-breakdown"].includes(agent.id)) {
+        setStatuses((prev) => ({
+          ...prev,
+          [agent.id]: { ...prev[agent.id], status: "complete", progress: 100 },
+        }));
 
-      setCurrentAgent(index + 1);
-      setTimeout(() => processAgent(index + 1), 300);
+        setCurrentAgent(index + 1);
+        setTimeout(() => processAgent(index + 1), 300);
+      }
     };
 
     processAgent(0);
-  }, [onComplete]);
+  }, [onComplete, onError]);
 
   return (
     <section className="min-h-screen flex items-center justify-center py-8 md:py-20 px-4">
@@ -190,6 +251,7 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
             const status = statuses[agent.id];
             const isActive = index === currentAgent;
             const isComplete = status.status === "complete";
+            const hasError = status.status === "error";
             const Icon = agent.icon;
 
             return (
@@ -200,13 +262,17 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
                 transition={{ delay: index * 0.1 }}
                 className={`glass-card p-4 md:p-6 transition-all duration-500 ${
                   isActive ? "border-primary glow-effect" : ""
-                } ${isComplete ? "border-primary/50" : ""}`}
+                } ${isComplete ? "border-primary/50" : ""} ${
+                  hasError ? "border-destructive" : ""
+                }`}
               >
                 <div className="flex items-center gap-3 md:gap-4">
                   <div
                     className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
                       isComplete
                         ? "bg-primary/20"
+                        : hasError
+                        ? "bg-destructive/20"
                         : isActive
                         ? "bg-primary/10"
                         : "bg-secondary"
@@ -214,6 +280,8 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
                   >
                     {isComplete ? (
                       <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7 text-primary" />
+                    ) : hasError ? (
+                      <AlertCircle className="w-6 h-6 md:w-7 md:h-7 text-destructive" />
                     ) : isActive ? (
                       <Loader2 className={`w-6 h-6 md:w-7 md:h-7 ${agent.color} animate-spin`} />
                     ) : (
@@ -229,15 +297,26 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
                           Complete
                         </span>
                       )}
+                      {hasError && (
+                        <span className="text-xs text-destructive font-medium shrink-0">
+                          Error
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-3 break-words">
-                      {agent.description}
+                      {hasError && status.output
+                        ? status.output
+                        : status.output || agent.description}
                     </p>
                     
                     {/* Progress Bar */}
                     <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
+                        className={`h-full rounded-full ${
+                          hasError
+                            ? "bg-destructive"
+                            : "bg-gradient-to-r from-primary to-accent"
+                        }`}
                         initial={{ width: 0 }}
                         animate={{ width: `${status.progress}%` }}
                         transition={{ duration: 0.3 }}
