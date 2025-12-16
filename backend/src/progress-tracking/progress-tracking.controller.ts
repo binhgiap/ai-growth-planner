@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,13 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ProgressTrackingService } from './progress-tracking.service';
 import { CreateProgressLogDto } from './dto/create-progress-log.dto';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 
 /**
  * ProgressTrackingController handles HTTP requests for progress tracking
@@ -36,9 +41,10 @@ export class ProgressTrackingController {
    * POST /progress-tracking - Create a new progress log
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new progress log' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: CreateProgressLogDto })
   @ApiResponse({
     status: 201,
@@ -56,12 +62,16 @@ export class ProgressTrackingController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async create(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() createProgressLogDto: CreateProgressLogDto,
   ) {
     const log = await this.progressTrackingService.create(
-      userId,
+      user.id,
       createProgressLogDto,
     );
     return {
@@ -75,8 +85,9 @@ export class ProgressTrackingController {
    * GET /progress-tracking - Get all progress logs for a user
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all progress logs for a user' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Progress logs retrieved successfully',
@@ -88,8 +99,12 @@ export class ProgressTrackingController {
       },
     },
   })
-  async findByUser(@Query('userId') userId: string) {
-    const logs = await this.progressTrackingService.findByUserId(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async findByUser(@CurrentUser() user: JwtPayload) {
+    const logs = await this.progressTrackingService.findByUserId(user.id);
     return {
       success: true,
       data: logs,
@@ -101,21 +116,26 @@ export class ProgressTrackingController {
    * GET /progress-tracking/period/:period - Get logs by period
    */
   @Get('period/:period')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get logs for a specific period (DAILY, WEEKLY, MONTHLY)',
   })
   @ApiParam({ name: 'period', type: 'string', description: 'Period type' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Progress logs retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByPeriod(
     @Param('period') period: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
     const logs = await this.progressTrackingService.findByPeriod(
-      userId,
+      user.id,
       period,
     );
     return {
@@ -129,8 +149,9 @@ export class ProgressTrackingController {
    * GET /progress-tracking/range - Get logs by date range
    */
   @Get('range')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get progress logs within a date range' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({
     name: 'startDate',
     type: 'string',
@@ -145,13 +166,17 @@ export class ProgressTrackingController {
     status: 200,
     description: 'Progress logs retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByDateRange(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
     const logs = await this.progressTrackingService.findByDateRange(
-      userId,
+      user.id,
       new Date(startDate),
       new Date(endDate),
     );
@@ -166,8 +191,9 @@ export class ProgressTrackingController {
    * GET /progress-tracking/summary/latest - Get latest progress summary
    */
   @Get('summary/latest')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get latest progress summary' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Progress summary retrieved successfully',
@@ -182,8 +208,14 @@ export class ProgressTrackingController {
       },
     },
   })
-  async getLatestSummary(@Query('userId') userId: string) {
-    const summary = await this.progressTrackingService.getLatestSummary(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getLatestSummary(@CurrentUser() user: JwtPayload) {
+    const summary = await this.progressTrackingService.getLatestSummary(
+      user.id,
+    );
     return {
       success: true,
       data: summary as unknown,
@@ -194,16 +226,21 @@ export class ProgressTrackingController {
    * GET /progress-tracking/trends - Get progress trends
    */
   @Get('trends')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get progress trends over time' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({ name: 'days', required: false, type: Number, example: 30 })
   @ApiResponse({
     status: 200,
     description: 'Progress trends retrieved successfully',
   })
-  async getTrends(@Query('userId') userId: string, @Query('days') days = 30) {
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getTrends(@CurrentUser() user: JwtPayload, @Query('days') days = 30) {
     const trends = await this.progressTrackingService.getProgressTrends(
-      userId,
+      user.id,
       days,
     );
     return {
@@ -216,19 +253,24 @@ export class ProgressTrackingController {
    * GET /progress-tracking/:id - Get progress log by ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a specific progress log by ID' })
   @ApiParam({ name: 'id', type: 'string', description: 'Progress log ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Progress log retrieved successfully',
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Progress log not found',
   })
-  async findById(@Param('id') id: string, @Query('userId') userId: string) {
-    const log = await this.progressTrackingService.findById(id, userId);
+  async findById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const log = await this.progressTrackingService.findById(id, user.id);
     return {
       success: true,
       data: log as unknown,
@@ -239,9 +281,10 @@ export class ProgressTrackingController {
    * PATCH /progress-tracking/:id - Update progress log
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a progress log' })
   @ApiParam({ name: 'id', type: 'string', description: 'Progress log ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({
     schema: {
       example: {
@@ -254,14 +297,18 @@ export class ProgressTrackingController {
     status: 200,
     description: 'Progress log updated successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async update(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() updateData: Record<string, unknown>,
   ) {
     const log = await this.progressTrackingService.update(
       id,
-      userId,
+      user.id,
       updateData,
     );
     return {
@@ -275,16 +322,21 @@ export class ProgressTrackingController {
    * DELETE /progress-tracking/:id - Delete progress log
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a progress log' })
   @ApiParam({ name: 'id', type: 'string', description: 'Progress log ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 204,
     description: 'Progress log deleted successfully',
   })
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
-    await this.progressTrackingService.delete(id, userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    await this.progressTrackingService.delete(id, user.id);
     return {
       success: true,
       message: 'Progress log deleted successfully',

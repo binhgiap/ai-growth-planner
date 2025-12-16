@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,13 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { GoalService } from './goals.service';
 import { CreateGoalDto, UpdateGoalDto } from './dto/create-goal.dto';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 
 /**
  * GoalController handles HTTP requests for goal management
@@ -34,9 +39,10 @@ export class GoalController {
    * POST /goals - Create a new goal
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new goal (OKR)' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: CreateGoalDto })
   @ApiResponse({
     status: 201,
@@ -55,11 +61,15 @@ export class GoalController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async create(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() createGoalDto: CreateGoalDto,
   ) {
-    const goal = await this.goalService.create(userId, createGoalDto);
+    const goal = await this.goalService.create(user.id, createGoalDto);
     return {
       success: true,
       data: goal,
@@ -71,8 +81,9 @@ export class GoalController {
    * GET /goals - Get all goals for a user
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all goals for a user' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -90,11 +101,15 @@ export class GoalController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByUser(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query('status') status?: string,
   ) {
-    const goals = await this.goalService.findByUserId(userId, status);
+    const goals = await this.goalService.findByUserId(user.id, status);
     return {
       success: true,
       data: goals,
@@ -106,18 +121,23 @@ export class GoalController {
    * GET /goals/type/:type - Get goals by type
    */
   @Get('type/:type')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get goals by type (OBJECTIVE or KEY_RESULT)' })
   @ApiParam({ name: 'type', type: 'string', description: 'Goal type' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Goals retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByType(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Param('type') type: string,
   ) {
-    const goals = await this.goalService.findByType(userId, type);
+    const goals = await this.goalService.findByType(user.id, type);
     return {
       success: true,
       data: goals,
@@ -129,8 +149,9 @@ export class GoalController {
    * GET /goals/progress - Get overall goal progress
    */
   @Get('progress/summary')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get overall goal progress summary' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Progress summary retrieved successfully',
@@ -143,8 +164,12 @@ export class GoalController {
       },
     },
   })
-  async getProgress(@Query('userId') userId: string) {
-    const progress = await this.goalService.getOverallProgress(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getProgress(@CurrentUser() user: JwtPayload) {
+    const progress = await this.goalService.getOverallProgress(user.id);
     return {
       success: true,
       data: { overallProgress: progress },
@@ -155,19 +180,24 @@ export class GoalController {
    * GET /goals/:id - Get goal by ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a specific goal by ID' })
   @ApiParam({ name: 'id', type: 'string', description: 'Goal ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Goal retrieved successfully',
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Goal not found',
   })
-  async findById(@Param('id') id: string, @Query('userId') userId: string) {
-    const goal = await this.goalService.findById(id, userId);
+  async findById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const goal = await this.goalService.findById(id, user.id);
     return {
       success: true,
       data: goal,
@@ -178,20 +208,25 @@ export class GoalController {
    * PATCH /goals/:id - Update goal
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update goal' })
   @ApiParam({ name: 'id', type: 'string', description: 'Goal ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: UpdateGoalDto })
   @ApiResponse({
     status: 200,
     description: 'Goal updated successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async update(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() updateGoalDto: UpdateGoalDto,
   ) {
-    const goal = await this.goalService.update(id, userId, updateGoalDto);
+    const goal = await this.goalService.update(id, user.id, updateGoalDto);
     return {
       success: true,
       data: goal,
@@ -203,16 +238,21 @@ export class GoalController {
    * DELETE /goals/:id - Delete goal
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete goal' })
   @ApiParam({ name: 'id', type: 'string', description: 'Goal ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 204,
     description: 'Goal deleted successfully',
   })
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
-    await this.goalService.delete(id, userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    await this.goalService.delete(id, user.id);
     return {
       success: true,
       message: 'Goal deleted successfully',

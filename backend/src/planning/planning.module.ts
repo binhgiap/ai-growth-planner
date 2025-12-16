@@ -5,9 +5,16 @@ import { AIAgentsModule } from '../ai-agents/ai-agents.module';
 import { UsersModule } from '../users/users.module';
 import { GoalsModule } from '../goals/goals.module';
 import { DailyTasksModule } from '../daily-tasks/daily-tasks.module';
+import { SkillGapModule } from '../skill-gap/skill-gap.module';
 
 @Module({
-  imports: [AIAgentsModule, UsersModule, GoalsModule, DailyTasksModule],
+  imports: [
+    AIAgentsModule,
+    UsersModule,
+    GoalsModule,
+    DailyTasksModule,
+    SkillGapModule,
+  ],
   controllers: [PlanningController],
   providers: [PlanningService],
   exports: [PlanningService],

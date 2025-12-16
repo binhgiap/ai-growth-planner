@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,12 +18,16 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { DailyTaskService } from './daily-tasks.service';
 import {
   CreateDailyTaskDto,
   UpdateDailyTaskDto,
 } from './dto/create-daily-task.dto';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 
 /**
  * DailyTaskController handles HTTP requests for daily task management
@@ -37,9 +42,10 @@ export class DailyTaskController {
    * POST /daily-tasks - Create a new task
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new daily task' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: CreateDailyTaskDto })
   @ApiResponse({
     status: 201,
@@ -57,11 +63,18 @@ export class DailyTaskController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async create(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() createDailyTaskDto: CreateDailyTaskDto,
   ) {
-    const task = await this.dailyTaskService.create(userId, createDailyTaskDto);
+    const task = await this.dailyTaskService.create(
+      user.id,
+      createDailyTaskDto,
+    );
     return {
       success: true,
       data: task,
@@ -73,8 +86,9 @@ export class DailyTaskController {
    * GET /daily-tasks/today - Get today's tasks
    */
   @Get('today')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all tasks for today' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Today tasks retrieved successfully',
@@ -86,8 +100,12 @@ export class DailyTaskController {
       },
     },
   })
-  async getTodaysTasks(@Query('userId') userId: string) {
-    const tasks = await this.dailyTaskService.getTodaysTasks(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getTodaysTasks(@CurrentUser() user: JwtPayload) {
+    const tasks = await this.dailyTaskService.getTodaysTasks(user.id);
     return {
       success: true,
       data: tasks,
@@ -99,8 +117,9 @@ export class DailyTaskController {
    * GET /daily-tasks/range - Get tasks by date range
    */
   @Get('range')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get tasks within a date range' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({
     name: 'startDate',
     type: 'string',
@@ -115,13 +134,17 @@ export class DailyTaskController {
     status: 200,
     description: 'Tasks retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async getTasksByDateRange(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
     const tasks = await this.dailyTaskService.getTasksByDateRange(
-      userId,
+      user.id,
       new Date(startDate),
       new Date(endDate),
     );
@@ -136,18 +159,23 @@ export class DailyTaskController {
    * GET /daily-tasks/goal/:goalId - Get tasks by goal
    */
   @Get('goal/:goalId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all tasks for a specific goal' })
   @ApiParam({ name: 'goalId', type: 'string', description: 'Goal ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Tasks retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async getTasksByGoal(
     @Param('goalId') goalId: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const tasks = await this.dailyTaskService.getTasksByGoal(goalId, userId);
+    const tasks = await this.dailyTaskService.getTasksByGoal(goalId, user.id);
     return {
       success: true,
       data: tasks,
@@ -159,14 +187,19 @@ export class DailyTaskController {
    * GET /daily-tasks/stats - Get task completion stats
    */
   @Get('stats/summary')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get task completion statistics' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Statistics retrieved successfully',
   })
-  async getStats(@Query('userId') userId: string) {
-    const stats = await this.dailyTaskService.getCompletionStats(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getStats(@CurrentUser() user: JwtPayload) {
+    const stats = await this.dailyTaskService.getCompletionStats(user.id);
     return {
       success: true,
       data: stats as unknown,
@@ -177,8 +210,9 @@ export class DailyTaskController {
    * GET /daily-tasks - Get all tasks for a user
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all tasks for a user' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -189,11 +223,15 @@ export class DailyTaskController {
     status: 200,
     description: 'Tasks retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByUser(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query('status') status?: string,
   ) {
-    const tasks = await this.dailyTaskService.findByUserId(userId, status);
+    const tasks = await this.dailyTaskService.findByUserId(user.id, status);
     return {
       success: true,
       data: tasks as unknown,
@@ -205,19 +243,24 @@ export class DailyTaskController {
    * GET /daily-tasks/:id - Get task by ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a specific task by ID' })
   @ApiParam({ name: 'id', type: 'string', description: 'Task ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Task retrieved successfully',
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Task not found',
   })
-  async findById(@Param('id') id: string, @Query('userId') userId: string) {
-    const task = await this.dailyTaskService.findById(id, userId);
+  async findById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const task = await this.dailyTaskService.findById(id, user.id);
     return {
       success: true,
       data: task as unknown,
@@ -228,22 +271,27 @@ export class DailyTaskController {
    * PATCH /daily-tasks/:id - Update task
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a task' })
   @ApiParam({ name: 'id', type: 'string', description: 'Task ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: UpdateDailyTaskDto })
   @ApiResponse({
     status: 200,
     description: 'Task updated successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async update(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() updateDailyTaskDto: UpdateDailyTaskDto,
   ) {
     const task = await this.dailyTaskService.update(
       id,
-      userId,
+      user.id,
       updateDailyTaskDto,
     );
     return {
@@ -257,15 +305,20 @@ export class DailyTaskController {
    * POST /daily-tasks/:id/complete - Mark task as completed
    */
   @Post(':id/complete')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Mark a task as completed' })
   @ApiParam({ name: 'id', type: 'string', description: 'Task ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Task marked as completed',
   })
-  async completeTask(@Param('id') id: string, @Query('userId') userId: string) {
-    const task = await this.dailyTaskService.completeTask(id, userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async completeTask(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const task = await this.dailyTaskService.completeTask(id, user.id);
     return {
       success: true,
       data: task,
@@ -277,16 +330,21 @@ export class DailyTaskController {
    * DELETE /daily-tasks/:id - Delete task
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a task' })
   @ApiParam({ name: 'id', type: 'string', description: 'Task ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 204,
     description: 'Task deleted successfully',
   })
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
-    await this.dailyTaskService.delete(id, userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    await this.dailyTaskService.delete(id, user.id);
     return {
       success: true,
       message: 'Task deleted successfully',

@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,13 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ReportService } from './reports.service';
 import { CreateReportDto } from './dto/create-report.dto';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { CurrentUser } from '@auth/decorators/current-user.decorator';
+import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 
 /**
  * ReportController handles HTTP requests for report management
@@ -34,9 +39,10 @@ export class ReportController {
    * POST /reports - Create a new report
    */
   @Post()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new HR report' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({ type: CreateReportDto })
   @ApiResponse({
     status: 201,
@@ -54,11 +60,15 @@ export class ReportController {
       },
     },
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async create(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() createReportDto: CreateReportDto,
   ) {
-    const report = await this.reportService.create(userId, createReportDto);
+    const report = await this.reportService.create(user.id, createReportDto);
     return {
       success: true,
       data: report,
@@ -70,8 +80,9 @@ export class ReportController {
    * GET /reports - Get all reports for a user
    */
   @Get()
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all reports for a user' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Reports retrieved successfully',
@@ -83,8 +94,12 @@ export class ReportController {
       },
     },
   })
-  async findByUser(@Query('userId') userId: string) {
-    const reports = await this.reportService.findByUserId(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async findByUser(@CurrentUser() user: JwtPayload) {
+    const reports = await this.reportService.findByUserId(user.id);
     return {
       success: true,
       data: reports,
@@ -96,18 +111,23 @@ export class ReportController {
    * GET /reports/type/:type - Get reports by type
    */
   @Get('type/:type')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get reports by type (MONTHLY, QUARTERLY, FINAL)' })
   @ApiParam({ name: 'type', type: 'string', description: 'Report type' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Reports retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByType(
     @Param('type') type: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
   ) {
-    const reports = await this.reportService.findByType(userId, type);
+    const reports = await this.reportService.findByType(user.id, type);
     return {
       success: true,
       data: reports,
@@ -119,8 +139,9 @@ export class ReportController {
    * GET /reports/summary/final - Get final report
    */
   @Get('summary/final')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get final 6-month HR report' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Final report retrieved successfully',
@@ -136,8 +157,12 @@ export class ReportController {
       },
     },
   })
-  async getFinalReport(@Query('userId') userId: string) {
-    const report = await this.reportService.getFinalReport(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getFinalReport(@CurrentUser() user: JwtPayload) {
+    const report = await this.reportService.getFinalReport(user.id);
     return {
       success: true,
       data: report,
@@ -148,14 +173,19 @@ export class ReportController {
    * GET /reports/summary/latest - Get latest report
    */
   @Get('summary/latest')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get latest report' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Latest report retrieved successfully',
   })
-  async getLatestReport(@Query('userId') userId: string) {
-    const report = await this.reportService.getLatestReport(userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getLatestReport(@CurrentUser() user: JwtPayload) {
+    const report = await this.reportService.getLatestReport(user.id);
     return {
       success: true,
       data: report,
@@ -166,8 +196,9 @@ export class ReportController {
    * GET /reports/range - Get reports by date range
    */
   @Get('range')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get reports within a date range' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiQuery({
     name: 'startDate',
     type: 'string',
@@ -182,13 +213,17 @@ export class ReportController {
     status: 200,
     description: 'Reports retrieved successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async findByDateRange(
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
     const reports = await this.reportService.findByDateRange(
-      userId,
+      user.id,
       new Date(startDate),
       new Date(endDate),
     );
@@ -203,19 +238,24 @@ export class ReportController {
    * GET /reports/:id - Get report by ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a specific report by ID' })
   @ApiParam({ name: 'id', type: 'string', description: 'Report ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 200,
     description: 'Report retrieved successfully',
   })
   @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
     status: 404,
     description: 'Report not found',
   })
-  async findById(@Param('id') id: string, @Query('userId') userId: string) {
-    const report = await this.reportService.findById(id, userId);
+  async findById(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    const report = await this.reportService.findById(id, user.id);
     return {
       success: true,
       data: report,
@@ -226,9 +266,10 @@ export class ReportController {
    * PATCH /reports/:id - Update report
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a report' })
   @ApiParam({ name: 'id', type: 'string', description: 'Report ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiBody({
     schema: {
       example: {
@@ -241,12 +282,16 @@ export class ReportController {
     status: 200,
     description: 'Report updated successfully',
   })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
   async update(
     @Param('id') id: string,
-    @Query('userId') userId: string,
+    @CurrentUser() user: JwtPayload,
     @Body() updateData: Record<string, unknown>,
   ) {
-    const report = await this.reportService.update(id, userId, updateData);
+    const report = await this.reportService.update(id, user.id, updateData);
     return {
       success: true,
       data: report,
@@ -258,16 +303,21 @@ export class ReportController {
    * DELETE /reports/:id - Delete report
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a report' })
   @ApiParam({ name: 'id', type: 'string', description: 'Report ID' })
-  @ApiQuery({ name: 'userId', type: 'string', description: 'User ID' })
   @ApiResponse({
     status: 204,
     description: 'Report deleted successfully',
   })
-  async delete(@Param('id') id: string, @Query('userId') userId: string) {
-    await this.reportService.delete(id, userId);
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    await this.reportService.delete(id, user.id);
     return {
       success: true,
       message: 'Report deleted successfully',
