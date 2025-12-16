@@ -140,16 +140,37 @@ ${okr.keyResults.map((kr) => `   ✓ ${kr}`).join('\n')}`,
 Each task MUST include:
 - title: Specific, unique, actionable (no generic names)
 - description: 2-3 clear sentences explaining what to do
-- dueDate: YYYY-MM-DD format within the 6-month period
-- estimatedHours: Between 0.5 and 4 hours
-- priority: "high", "medium", or "low"
-- linkedGoal: Which objective this supports
-- resources: Array of 1-3 learning resources (courses, books, tools)
+- dueDate: YYYY-MM-DD format ONLY (e.g., "2024-12-16") - NO timestamps, NO NaN values
+- estimatedHours: Number between 0.5 and 4 (e.g., 1.5, 2, 3.5)
+- priority: Exactly "high", "medium", or "low" (no other values)
+- linkedGoal: Which objective this supports (use exact objective text)
+- resources: Array of 1-3 learning resources (e.g., ["Course name", "Documentation"])
+
+🚨 CRITICAL DATE FORMAT:
+- Use ONLY valid dates in YYYY-MM-DD format
+- Start from ${startDate.toISOString().split('T')[0]} 
+- End by ${endDate.toISOString().split('T')[0]}
+- Distribute dates evenly across the 180-day period
+- NO invalid dates, NO NaN values, NO timestamps
+
+📅 DATE DISTRIBUTION EXAMPLE:
+Week 1: 2024-12-16, 2024-12-17, 2024-12-18, etc.
+Week 2: 2024-12-23, 2024-12-24, 2024-12-25, etc.
+Continue this pattern for 26 weeks...
 
 🎯 RETURN EXACT JSON FORMAT:
 {
   "tasks": [
-    // EXACTLY 180 task objects here
+    {
+      "title": "Set up Node.js development environment",
+      "description": "Install Node.js, npm, and configure your local development environment for backend development.",
+      "dueDate": "2024-12-16",
+      "estimatedHours": 2,
+      "priority": "high", 
+      "linkedGoal": "Master Backend Development Fundamentals",
+      "resources": ["Node.js Official Documentation", "Development Setup Guide"]
+    }
+    // ... exactly 179 more tasks
   ],
   "schedule": "Detailed breakdown of how the 180 tasks are distributed across 26 weeks",
   "summary": "Overall task plan summary with key milestones and learning outcomes"
@@ -164,10 +185,69 @@ Each task MUST include:
         userMessage,
       );
 
-      // Validate the result
+      // Validate the result and fix invalid dates
       if (!result.tasks || !Array.isArray(result.tasks)) {
         throw new Error('Invalid response: tasks array is missing');
       }
+
+      // Fix any invalid dates in tasks
+      result.tasks = result.tasks.map((task, index) => {
+        let validDueDate: string;
+
+        try {
+          // Check if dueDate is valid
+          if (
+            !task.dueDate ||
+            task.dueDate.includes('NaN') ||
+            task.dueDate.includes('undefined')
+          ) {
+            // Generate a proper date based on task index
+            const baseDate = new Date();
+            const dayOffset = Math.floor(index / 7) * 7 + (index % 7); // Distribute across weeks
+            baseDate.setDate(baseDate.getDate() + dayOffset);
+            validDueDate = baseDate.toISOString().split('T')[0];
+          } else {
+            // Test if the date is parseable
+            const testDate = new Date(task.dueDate);
+            if (isNaN(testDate.getTime())) {
+              // Generate fallback date
+              const baseDate = new Date();
+              const dayOffset = Math.floor(index / 7) * 7 + (index % 7);
+              baseDate.setDate(baseDate.getDate() + dayOffset);
+              validDueDate = baseDate.toISOString().split('T')[0];
+            } else {
+              validDueDate = task.dueDate;
+            }
+          }
+        } catch (error) {
+          // Fallback date generation
+          const baseDate = new Date();
+          const dayOffset = Math.floor(index / 7) * 7 + (index % 7);
+          baseDate.setDate(baseDate.getDate() + dayOffset);
+          validDueDate = baseDate.toISOString().split('T')[0];
+        }
+
+        return {
+          ...task,
+          dueDate: validDueDate,
+          // Also ensure other fields are valid
+          estimatedHours:
+            typeof task.estimatedHours === 'number' &&
+            !isNaN(task.estimatedHours)
+              ? Math.max(0.5, Math.min(4, task.estimatedHours))
+              : 2,
+          priority: ['high', 'medium', 'low'].includes(task.priority)
+            ? task.priority
+            : 'medium',
+          title: task.title || `Task ${index + 1}`,
+          description: task.description || `Development task ${index + 1}`,
+          linkedGoal:
+            task.linkedGoal || okrs[0]?.objective || 'General Development',
+          resources: Array.isArray(task.resources)
+            ? task.resources
+            : ['Documentation', 'Online tutorials'],
+        };
+      });
 
       if (result.tasks.length !== 180) {
         console.warn(`Expected 180 tasks, got ${result.tasks.length}`);
@@ -219,20 +299,110 @@ Last task date: ${lastDate.toISOString().split('T')[0]}
 Objectives:
 ${okrs.map((okr) => `- ${okr.objective}`).join('\n')}
 
+IMPORTANT: Use proper date format YYYY-MM-DD only (e.g., "2024-12-16")
+NO timestamps, NO NaN values, NO invalid dates.
+
 Return JSON format:
 {
   "tasks": [
-    // Exactly ${count} task objects
+    // Exactly ${count} task objects with proper date format
   ]
 }
     `;
 
-    const result = await this.openaiProvider.generateJSON<{ tasks: any[] }>(
-      this.systemPrompt,
-      userMessage,
-    );
+    try {
+      const result = await this.openaiProvider.generateJSON<{ tasks: any[] }>(
+        this.systemPrompt,
+        userMessage,
+      );
 
-    return result.tasks || [];
+      // Validate and fix any invalid dates in the additional tasks
+      const validatedTasks = (result.tasks || []).map((task, index) => {
+        let validDueDate: string;
+
+        try {
+          // Check if dueDate is valid
+          if (
+            !task.dueDate ||
+            task.dueDate.includes('NaN') ||
+            task.dueDate.includes('undefined')
+          ) {
+            // Generate a proper date based on last date + index
+            const baseDate = new Date(lastDate);
+            baseDate.setDate(baseDate.getDate() + index + 1);
+            validDueDate = baseDate.toISOString().split('T')[0];
+          } else {
+            // Test if the date is parseable
+            const testDate = new Date(task.dueDate);
+            if (isNaN(testDate.getTime())) {
+              // Generate fallback date
+              const baseDate = new Date(lastDate);
+              baseDate.setDate(baseDate.getDate() + index + 1);
+              validDueDate = baseDate.toISOString().split('T')[0];
+            } else {
+              validDueDate = task.dueDate;
+            }
+          }
+        } catch (error) {
+          // Fallback date generation
+          const baseDate = new Date(lastDate);
+          baseDate.setDate(baseDate.getDate() + index + 1);
+          validDueDate = baseDate.toISOString().split('T')[0];
+        }
+
+        return {
+          ...task,
+          dueDate: validDueDate,
+          estimatedHours:
+            typeof task.estimatedHours === 'number' &&
+            !isNaN(task.estimatedHours)
+              ? Math.max(0.5, Math.min(4, task.estimatedHours))
+              : 2,
+          priority: ['high', 'medium', 'low'].includes(task.priority)
+            ? task.priority
+            : 'medium',
+          title: task.title || `Additional Task ${index + 1}`,
+          description:
+            task.description || `Additional development task ${index + 1}`,
+          linkedGoal:
+            task.linkedGoal || okrs[0]?.objective || 'General Development',
+          resources: Array.isArray(task.resources)
+            ? task.resources
+            : ['Documentation', 'Online tutorials'],
+        };
+      });
+
+      return validatedTasks;
+    } catch (error) {
+      console.error('Error generating additional tasks:', error);
+      // Return fallback tasks if AI generation fails
+      return this.generateFallbackAdditionalTasks(count, lastDate, okrs);
+    }
+  }
+
+  private generateFallbackAdditionalTasks(
+    count: number,
+    lastDate: Date,
+    okrs: any[],
+  ): any[] {
+    const tasks: any[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const taskDate = new Date(lastDate);
+      taskDate.setDate(taskDate.getDate() + i + 1);
+
+      tasks.push({
+        title: `Fallback Task ${i + 1}`,
+        description: `Fallback development task. Complete learning activity related to your objectives.`,
+        dueDate: taskDate.toISOString().split('T')[0],
+        estimatedHours: 2,
+        priority: 'medium',
+        linkedGoal: okrs[0]?.objective || 'General Development',
+        resources: ['Documentation', 'Online tutorials'],
+      });
+    }
+
+    return tasks;
   }
 
   /**

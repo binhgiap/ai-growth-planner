@@ -190,13 +190,53 @@ export class PlanningService {
         let totalEstimatedHours = 0;
 
         for (const task of tasksArray) {
+          // Validate and fix dueDate
+          let taskDueDate: Date;
+          try {
+            // Check if task.dueDate is valid
+            if (!task.dueDate || task.dueDate.includes('NaN')) {
+              // Generate a fallback date if invalid
+              const fallbackDate = new Date();
+              fallbackDate.setDate(
+                fallbackDate.getDate() + Math.floor(Math.random() * 180),
+              );
+              taskDueDate = fallbackDate;
+              this.logger.warn(
+                `Invalid dueDate for task "${task.title}", using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+              );
+            } else {
+              taskDueDate = new Date(task.dueDate);
+              // Check if the parsed date is valid
+              if (isNaN(taskDueDate.getTime())) {
+                const fallbackDate = new Date();
+                fallbackDate.setDate(
+                  fallbackDate.getDate() + Math.floor(Math.random() * 180),
+                );
+                taskDueDate = fallbackDate;
+                this.logger.warn(
+                  `Invalid parsed dueDate for task "${task.title}", using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+                );
+              }
+            }
+          } catch (error) {
+            // Fallback to a random date within 6 months
+            const fallbackDate = new Date();
+            fallbackDate.setDate(
+              fallbackDate.getDate() + Math.floor(Math.random() * 180),
+            );
+            taskDueDate = fallbackDate;
+            this.logger.warn(
+              `Error parsing dueDate for task "${task.title}": ${error.message}, using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+            );
+          }
+
           const priority =
             task.priority === 'high' ? 5 : task.priority === 'medium' ? 3 : 1;
 
           const createdTask = await this.dailyTaskService.create(userId, {
             title: task.title,
             description: task.description,
-            dueDate: new Date(task.dueDate),
+            dueDate: taskDueDate,
             estimatedHours: task.estimatedHours,
             priority,
           });
