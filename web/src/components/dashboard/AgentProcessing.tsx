@@ -88,12 +88,19 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
 
           const response = await planningApi.analyzeSkillGap();
           
+          // Extract skill names from gap objects
+          const skillNames = response.data.gaps
+            .slice(0, 3)
+            .map((gap) => gap.skill)
+            .join(", ");
+          const moreGaps = response.data.gaps.length > 3 ? "..." : "";
+          
           setStatuses((prev) => ({
             ...prev,
             [agent.id]: { 
               ...prev[agent.id], 
               progress: 80,
-              output: `Found ${response.data.gapCount} skill gaps: ${response.data.gaps.slice(0, 3).join(", ")}${response.data.gaps.length > 3 ? "..." : ""}`
+              output: `Found ${response.data.gapCount} skill gaps: ${skillNames}${moreGaps}`
             },
           }));
 

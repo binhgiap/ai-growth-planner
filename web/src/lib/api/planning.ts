@@ -34,7 +34,12 @@ export interface SkillGapResponse {
   userId: string;
   currentLevel: string;
   targetLevel: string;
-  gaps: string[];
+  gaps: Array<{
+    skill: string;
+    importance: 'critical' | 'high' | 'medium' | 'low';
+    currentLevel: number;
+    targetLevel: number;
+  }>;
   gapCount: number;
   priority: string;
   createdAt: string;
