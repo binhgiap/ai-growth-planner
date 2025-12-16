@@ -4,14 +4,11 @@ import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
 import { AgentProcessing } from "@/components/dashboard/AgentProcessing";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { UserProfile, GrowthPlan } from "@/types/growth-plan";
-import { generateMockPlan } from "@/data/mock-plan";
-import { planningApi, tasksApi } from "@/lib/api";
+import { tasksApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { loadPlanFromAPI, persistPlanToAPI, convertApiPlanToGrowthPlan } from "@/lib/utils/api-converters";
 
 type AppState = "landing" | "onboarding" | "processing" | "dashboard";
-
-const getPlanStorageKey = (email: string) => `user_growth_plan_${email}`;
 
 const UserDashboard = () => {
   const [appState, setAppState] = useState<AppState>("landing");
@@ -21,85 +18,47 @@ const UserDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Check for existing plan on mount - try API first, then localStorage
+  // Load plan from API only (no localStorage)
   useEffect(() => {
     const loadPlan = async () => {
       // Get current user
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       
-      if (!user || !user.email) {
+      if (!user || !user.id) {
         setIsLoading(false);
         return;
       }
 
-      const userId = user.id || "user-1";
+      const userId = user.id;
       
-      // Try to load from API first
       try {
-        // We need userProfile to load plan, so check localStorage first for profile
-        const planKey = getPlanStorageKey(user.email);
-        const savedPlan = localStorage.getItem(planKey);
+        // Create default profile from user data
+        const defaultProfile: UserProfile = {
+          role: user.currentRole || "",
+          currentLevel: "",
+          dailyTime: 2,
+          targetGoal: user.targetRole || "",
+          targetLevel: "",
+        };
         
-        if (savedPlan) {
-          try {
-            const plan: GrowthPlan = JSON.parse(savedPlan);
-            // Verify plan belongs to current user
-            if (plan.userId === userId || plan.userId === "user-1") {
-              setGrowthPlan(plan);
-              setUserProfile(plan.profile);
-              setAppState("dashboard");
-              
-              // Try to sync with API in background
-              try {
-                const apiPlan = await loadPlanFromAPI(userId, plan.profile);
-                if (apiPlan) {
-                  // Merge API data with local data
-                  setGrowthPlan(apiPlan);
-                  localStorage.setItem(planKey, JSON.stringify(apiPlan));
-                }
-              } catch (error) {
-                console.warn("Failed to sync with API:", error);
-              }
-            } else {
-              // Plan belongs to different user, clear it
-              localStorage.removeItem(planKey);
-            }
-          } catch (error) {
-            console.error("Error loading saved plan:", error);
-            localStorage.removeItem(planKey);
-          }
+        // Try to load plan from API
+        const apiPlan = await loadPlanFromAPI(userId, defaultProfile);
+        if (apiPlan && (apiPlan.okrs.length > 0 || apiPlan.dailyTasks.length > 0)) {
+          // User has plan data with actual content - show dashboard
+          setGrowthPlan(apiPlan);
+          setUserProfile(apiPlan.profile);
+          setAppState("dashboard");
         } else {
-          // No local plan, try to load from API
-          try {
-            // We need profile, so we'll need to get it from user data or create default
-            const defaultProfile: UserProfile = {
-              role: user.currentRole || "",
-              currentLevel: "",
-              dailyTime: 2,
-              targetGoal: user.targetRole || "",
-              targetLevel: "",
-            };
-            
-            const apiPlan = await loadPlanFromAPI(userId, defaultProfile);
-            if (apiPlan) {
-              setGrowthPlan(apiPlan);
-              setUserProfile(apiPlan.profile);
-              setAppState("dashboard");
-              const planKey = getPlanStorageKey(user.email);
-              localStorage.setItem(planKey, JSON.stringify(apiPlan));
-            } else {
-              // No plan found - user needs to create one
-              // This is not an error, just no plan exists yet
-            }
-          } catch (error: unknown) {
-            // Only log, don't show error - user just needs to create a plan
-            const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            console.warn("Failed to load plan from API (user may not have a plan yet):", errorMessage);
-          }
+          // No plan found or plan is empty - show landing page for user to create a plan
+          setAppState("landing");
         }
-      } catch (error) {
-        console.error("Error in loadPlan:", error);
+      } catch (error: unknown) {
+        // Only log, don't show error - user just needs to create a plan
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.warn("Failed to load plan from API (user may not have a plan yet):", errorMessage);
+        // Show landing page so user can create a plan
+        setAppState("landing");
       }
       
       setIsLoading(false);
@@ -124,56 +83,37 @@ const UserDashboard = () => {
       const user = userStr ? JSON.parse(userStr) : null;
       const userId = user?.id || "user-1";
       const userEmail = user?.email || "";
-      
+
       if (!userEmail) {
         setError("User email not found. Please log in again.");
         return;
       }
 
       setError(null);
-      
+
       try {
-        // Generate plan via API - NO FALLBACK TO MOCK
-        console.log(`[API] Generating plan for user: ${userId}`);
-        const apiResponse = await planningApi.generatePlan(userId);
-        
-        if (!apiResponse.success || !apiResponse.data) {
-          throw new Error(apiResponse.message || "Failed to generate plan. API returned unsuccessful response.");
+        // Load the plan that was generated by the agents (skill-gap, goals, daily tasks, etc.)
+        console.log(`[API] Loading generated plan for user: ${userId}`);
+        const apiPlan = await loadPlanFromAPI(userId, userProfile);
+
+        if (!apiPlan) {
+          throw new Error("Failed to load generated plan from server. Please try again.");
         }
-        
-        // Convert API response to GrowthPlan format
-        const plan = convertApiPlanToGrowthPlan(apiResponse.data, userProfile, userId);
-        
-        // Persist goals and tasks to API
-        try {
-          await persistPlanToAPI(userId, plan);
-          // Also call the persist endpoint
-          await planningApi.persistPlan(userId, apiResponse.data);
-        } catch (persistError: unknown) {
-          const persistErrorMsg = persistError instanceof Error ? persistError.message : "Failed to save plan to database";
-          console.error("Failed to persist plan to API:", persistError);
-          toast({
-            title: "Warning",
-            description: persistErrorMsg,
-            variant: "destructive",
-          });
-          // Continue - plan is created but not persisted
-        }
-        
-        // Save plan to localStorage using email as key
-        const planKey = getPlanStorageKey(userEmail);
-        localStorage.setItem(planKey, JSON.stringify(plan));
-        setGrowthPlan(plan);
+
+        setGrowthPlan(apiPlan);
         setAppState("dashboard");
-        
+
         toast({
           title: "Success",
           description: "Your 6-month growth plan has been generated successfully!",
         });
       } catch (error: unknown) {
         // NO FALLBACK - Show error to user
-        const errorMessage = error instanceof Error ? error.message : "Failed to generate plan. Please check your connection and try again.";
-        console.error("API plan generation failed:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to load generated plan. Please check your connection and try again.";
+        console.error("Loading plan from API failed:", error);
         setError(errorMessage);
         toast({
           title: "Error",
@@ -215,11 +155,7 @@ const UserDashboard = () => {
     
     setGrowthPlan(updatedPlan);
     
-    // Save to localStorage
-    const planKey = getPlanStorageKey(userEmail);
-    localStorage.setItem(planKey, JSON.stringify(updatedPlan));
-
-    // Try to update via API (non-blocking)
+    // Update via API (non-blocking)
     try {
       const task = growthPlan.dailyTasks.find(t => t.id === taskId);
       if (task) {

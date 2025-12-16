@@ -104,6 +104,28 @@ export const convertApiPlanToGrowthPlan = (
 };
 
 /**
+ * Check if user has plan data in API (has goals or tasks)
+ */
+export const hasUserPlan = async (userId: string): Promise<boolean> => {
+  try {
+    const { goalsApi, tasksApi } = await import("@/lib/api");
+    
+    const [goalsResponse, tasksResponse] = await Promise.all([
+      goalsApi.findByUser(userId).catch(() => ({ success: false, data: { data: [], count: 0 } })),
+      tasksApi.findByUser(userId).catch(() => ({ success: false, data: [] })),
+    ]);
+    
+    const hasGoals = goalsResponse.success && goalsResponse.data?.data && goalsResponse.data.data.length > 0;
+    const hasTasks = tasksResponse.success && tasksResponse.data && tasksResponse.data.length > 0;
+    
+    return hasGoals || hasTasks;
+  } catch (error) {
+    console.error("Error checking if user has plan:", error);
+    return false;
+  }
+};
+
+/**
  * Load plan from API (goals + tasks) and convert to GrowthPlan
  */
 export const loadPlanFromAPI = async (

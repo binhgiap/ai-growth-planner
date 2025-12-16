@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Settings, LogOut, UserCircle, Award } from "lucide-react";
 import { NFT } from "@/types/admin";
-import { GrowthPlan } from "@/types/growth-plan";
+import { GrowthPlan, UserProfile } from "@/types/growth-plan";
 import { generateUserNFTs } from "@/lib/utils/nfts";
 import { UserNFTsView } from "./UserNFTsView";
+import { loadPlanFromAPI } from "@/lib/utils/api-converters";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,25 +38,37 @@ export const UserProfileMenu = () => {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
 
-  // Load user NFTs from growth plan
+  // Load user NFTs from growth plan (from API)
   useEffect(() => {
-    if (user?.email) {
-      const planKey = `user_growth_plan_${user.email}`;
-      const savedPlan = localStorage.getItem(planKey);
-      if (savedPlan) {
+    const loadNFTs = async () => {
+      if (user?.id) {
         try {
-          const plan: GrowthPlan = JSON.parse(savedPlan);
-          const nfts = generateUserNFTs(plan);
-          setUserNFTs(nfts);
+          // Create default profile to load plan
+          const defaultProfile: UserProfile = {
+            role: user.currentRole || "",
+            currentLevel: "",
+            dailyTime: 2,
+            targetGoal: user.targetRole || "",
+            targetLevel: "",
+          };
+          
+          const plan = await loadPlanFromAPI(user.id, defaultProfile);
+          if (plan) {
+            const nfts = generateUserNFTs(plan);
+            setUserNFTs(nfts);
+          }
         } catch (error) {
           console.error("Error loading plan for NFTs:", error);
         }
       }
-    }
-  }, [user?.email]);
+    };
+    
+    loadNFTs();
+  }, [user?.id]);
 
   const handleLogout = () => {
-    // Only remove user/role information, keep the plan data
+    // Remove auth information (plan data is in API, not localStorage)
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
     navigate("/");
   };
@@ -105,7 +118,7 @@ export const UserProfileMenu = () => {
             </Badge>
           )}
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate("/user/profile")}>
           <UserCircle className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>

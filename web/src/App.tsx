@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import UserDashboard from "./pages/user/UserDashboard";
+import UserProfilePage from "./pages/user/UserProfilePage";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 import { ApiStatus } from "@/components/debug/ApiStatus";
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/user" element={<UserDashboard />} />
+          <Route path="/user/profile" element={<UserProfilePage />} />
           <Route path="/admin/*" element={<AdminPortal />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

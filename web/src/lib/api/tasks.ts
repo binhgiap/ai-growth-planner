@@ -40,12 +40,13 @@ export interface DailyTask {
 export const tasksApi = {
   // Create a new task
   create: async (userId: string, data: CreateDailyTaskDto): Promise<ApiResponse<DailyTask>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<DailyTask>>(response);
+    return handleApiResponse<ApiResponse<DailyTask>>(response, 'POST', url);
   },
 
   // Get all tasks for a user
@@ -61,12 +62,15 @@ export const tasksApi = {
   },
 
   // Get today's tasks
-  getTodaysTasks: async (userId: string): Promise<ApiResponse<{ data: DailyTask[]; count: number }>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/today?userId=${userId}`, {
+  getTodaysTasks: async (
+    userId: string,
+  ): Promise<ApiResponse<DailyTask[]> & { count: number }> => {
+    const url = `${API_BASE_URL}/api/daily-tasks/today?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<{ data: DailyTask[]; count: number }>>(response);
+    return handleApiResponse<ApiResponse<DailyTask[]> & { count: number }>(response, 'GET', url);
   },
 
   // Get tasks by date range
@@ -77,48 +81,53 @@ export const tasksApi = {
       endDate,
     });
     
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/range?${queryParams}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/range?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<DailyTask[]>>(response);
+    return handleApiResponse<ApiResponse<DailyTask[]>>(response, 'GET', url);
   },
 
   // Get tasks by goal
   getTasksByGoal: async (goalId: string, userId: string): Promise<ApiResponse<DailyTask[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/goal/${goalId}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/goal/${goalId}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<DailyTask[]>>(response);
+    return handleApiResponse<ApiResponse<DailyTask[]>>(response, 'GET', url);
   },
 
   // Get task statistics
   getStats: async (userId: string): Promise<ApiResponse<any>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/stats/summary?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/stats/summary?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<any>>(response);
+    return handleApiResponse<ApiResponse<any>>(response, 'GET', url);
   },
 
   // Get task by ID
   findById: async (id: string, userId: string): Promise<ApiResponse<DailyTask>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<DailyTask>>(response);
+    return handleApiResponse<ApiResponse<DailyTask>>(response, 'GET', url);
   },
 
   // Update task
   update: async (id: string, userId: string, data: UpdateDailyTaskDto): Promise<ApiResponse<DailyTask>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<DailyTask>>(response);
+    return handleApiResponse<ApiResponse<DailyTask>>(response, 'PATCH', url);
   },
 
   // Delete task
@@ -134,11 +143,12 @@ export const tasksApi = {
 
   // Complete task
   completeTask: async (id: string, userId: string): Promise<ApiResponse<DailyTask>> => {
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks/${id}/complete?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/daily-tasks/${id}/complete?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<DailyTask>>(response);
+    return handleApiResponse<ApiResponse<DailyTask>>(response, 'POST', url);
   },
 };
 

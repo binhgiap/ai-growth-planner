@@ -37,61 +37,70 @@ export interface Goal {
 export const goalsApi = {
   // Create a new goal
   create: async (userId: string, data: CreateGoalDto): Promise<ApiResponse<Goal>> => {
-    const response = await fetch(`${API_BASE_URL}/api/goals?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/goals?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<Goal>>(response);
+    return handleApiResponse<ApiResponse<Goal>>(response, 'POST', url);
   },
 
   // Get all goals for a user
-  findByUser: async (userId: string, status?: string): Promise<ApiResponse<{ data: Goal[]; count: number }>> => {
+  findByUser: async (
+    userId: string,
+    status?: string,
+  ): Promise<ApiResponse<Goal[]> & { count: number }> => {
     const queryParams = new URLSearchParams({ userId });
     if (status) queryParams.append('status', status);
-    
-    const response = await fetch(`${API_BASE_URL}/api/goals?${queryParams}`, {
+
+    const url = `${API_BASE_URL}/api/goals?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<{ data: Goal[]; count: number }>>(response);
+    return handleApiResponse<ApiResponse<Goal[]> & { count: number }>(response, 'GET', url);
   },
 
   // Get goals by type
   findByType: async (userId: string, type: 'OBJECTIVE' | 'KEY_RESULT'): Promise<ApiResponse<Goal[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/goals/type/${type}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/goals/type/${type}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Goal[]>>(response);
+    return handleApiResponse<ApiResponse<Goal[]>>(response, 'GET', url);
   },
 
   // Get progress summary
   getProgress: async (userId: string): Promise<ApiResponse<{ overallProgress: number }>> => {
-    const response = await fetch(`${API_BASE_URL}/api/goals/progress/summary?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/goals/progress/summary?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<{ overallProgress: number }>>(response);
+    return handleApiResponse<ApiResponse<{ overallProgress: number }>>(response, 'GET', url);
   },
 
   // Get goal by ID
   findById: async (id: string, userId: string): Promise<ApiResponse<Goal>> => {
-    const response = await fetch(`${API_BASE_URL}/api/goals/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/goals/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Goal>>(response);
+    return handleApiResponse<ApiResponse<Goal>>(response, 'GET', url);
   },
 
   // Update goal
   update: async (id: string, userId: string, data: UpdateGoalDto): Promise<ApiResponse<Goal>> => {
-    const response = await fetch(`${API_BASE_URL}/api/goals/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/goals/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<Goal>>(response);
+    return handleApiResponse<ApiResponse<Goal>>(response, 'PATCH', url);
   },
 
   // Delete goal

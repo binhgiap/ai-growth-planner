@@ -29,48 +29,55 @@ export interface FinalReport {
 export const reportsApi = {
   // Create a new report
   create: async (userId: string, data: CreateReportDto): Promise<ApiResponse<Report>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<Report>>(response);
+    return handleApiResponse<ApiResponse<Report>>(response, 'POST', url);
   },
 
   // Get all reports for a user
-  findByUser: async (userId: string): Promise<ApiResponse<{ data: Report[]; count: number }>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports?userId=${userId}`, {
+  findByUser: async (
+    userId: string,
+  ): Promise<ApiResponse<Report[]> & { count: number }> => {
+    const url = `${API_BASE_URL}/api/reports?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<{ data: Report[]; count: number }>>(response);
+    return handleApiResponse<ApiResponse<Report[]> & { count: number }>(response, 'GET', url);
   },
 
   // Get reports by type
   findByType: async (userId: string, type: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'FINAL'): Promise<ApiResponse<Report[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports/type/${type}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports/type/${type}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Report[]>>(response);
+    return handleApiResponse<ApiResponse<Report[]>>(response, 'GET', url);
   },
 
   // Get final report
   getFinalReport: async (userId: string): Promise<ApiResponse<FinalReport>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports/summary/final?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports/summary/final?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<FinalReport>>(response);
+    return handleApiResponse<ApiResponse<FinalReport>>(response, 'GET', url);
   },
 
   // Get latest report
   getLatestReport: async (userId: string): Promise<ApiResponse<Report>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports/summary/latest?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports/summary/latest?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Report>>(response);
+    return handleApiResponse<ApiResponse<Report>>(response, 'GET', url);
   },
 
   // Get reports by date range
@@ -81,30 +88,33 @@ export const reportsApi = {
       endDate,
     });
     
-    const response = await fetch(`${API_BASE_URL}/api/reports/range?${queryParams}`, {
+    const url = `${API_BASE_URL}/api/reports/range?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Report[]>>(response);
+    return handleApiResponse<ApiResponse<Report[]>>(response, 'GET', url);
   },
 
   // Get report by ID
   findById: async (id: string, userId: string): Promise<ApiResponse<Report>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<Report>>(response);
+    return handleApiResponse<ApiResponse<Report>>(response, 'GET', url);
   },
 
   // Update report
   update: async (id: string, userId: string, data: Partial<CreateReportDto>): Promise<ApiResponse<Report>> => {
-    const response = await fetch(`${API_BASE_URL}/api/reports/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/reports/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<Report>>(response);
+    return handleApiResponse<ApiResponse<Report>>(response, 'PATCH', url);
   },
 
   // Delete report

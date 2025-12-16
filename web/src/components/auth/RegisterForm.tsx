@@ -4,8 +4,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RegisterData } from "@/types/auth";
-import { usersApi } from "@/lib/api";
+import { RegisterFormData, RegisterData, StoredUser } from "@/types/auth";
+import { authApi } from "@/lib/api";
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -15,7 +15,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [formData, setFormData] = useState<RegisterData>({
+  const [formData, setFormData] = useState<RegisterFormData>({
     email: "",
     password: "",
     name: "",
@@ -42,38 +42,47 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
     setIsLoading(true);
 
     try {
-      // Split name into first and last name
+      // Split name into first and last name for backend payload
       const nameParts = formData.name.trim().split(/\s+/);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
 
-      console.log(`[API] Creating user via API:`, { email: formData.email, firstName, lastName });
-      
-      // Create user via API
-      const response = await usersApi.create({
+      console.log(`[API] Registering user via auth API:`, {
         email: formData.email,
         firstName,
         lastName,
-        currentRole: "", // Will be filled in onboarding
-        targetRole: "", // Will be filled in onboarding
       });
-      
-      console.log(`[API] User creation response:`, response);
+
+      const payload: RegisterData = {
+        email: formData.email,
+        password: formData.password,
+        firstName,
+        lastName,
+        currentRole: "",
+        targetRole: "",
+      };
+
+      const response = await authApi.register(payload);
 
       if (response.success && response.data) {
-        // Save user data to localStorage
-        const newUser = {
-          id: response.data.id,
-          email: response.data.email,
-          name: `${response.data.firstName} ${response.data.lastName}`.trim(),
-          firstName: response.data.firstName,
-          lastName: response.data.lastName,
-          role: "user" as const,
-          createdAt: response.data.createdAt,
+        const { accessToken, user } = response.data;
+
+        // Persist auth token and user info
+        const storedUser: StoredUser = {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          createdAt: user.createdAt,
+          name: `${user.firstName} ${user.lastName}`.trim() || user.email,
         };
 
-        localStorage.setItem("user", JSON.stringify(newUser));
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("user", JSON.stringify(storedUser));
+
         setIsLoading(false);
+        // New users start as normal users -> go to user dashboard
         navigate("/user");
       } else {
         setError("Failed to create account. Please try again.");

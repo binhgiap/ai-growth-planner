@@ -4,8 +4,9 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LoginCredentials } from "@/types/auth";
-import { usersApi } from "@/lib/api";
+import { LoginData, StoredUser } from "@/types/auth";
+import { authApi } from "@/lib/api";
+import { hasUserPlan } from "@/lib/utils/api-converters";
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -15,7 +16,7 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<"user" | "admin">("user");
-  const [formData, setFormData] = useState<LoginCredentials>({
+  const [formData, setFormData] = useState<LoginData>({
     email: "user@example.com",
     password: "",
   });
@@ -28,33 +29,49 @@ export const LoginForm = ({ onSwitchToRegister }: LoginFormProps) => {
     setIsLoading(true);
     
     try {
-      // Try to find user by email via API
-      // Note: The API might not have a login endpoint, so we'll try to get user profile
-      // If user doesn't exist, API will throw an error
-      const usersResponse = await usersApi.findAll({ limit: 100, page: 1 });
-      
-      if (usersResponse.success && usersResponse.data) {
-        const user = usersResponse.data.find(u => u.email === formData.email);
-        
-        if (!user) {
-          throw new Error("User not found. Please check your email or register a new account.");
-        }
-        
-        // Save user data to localStorage
-        localStorage.setItem("user", JSON.stringify({
-          id: user.id,
-          email: user.email,
-          name: `${user.firstName} ${user.lastName}`.trim(),
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: selectedRole,
-          createdAt: user.createdAt,
-        }));
-        
-        setIsLoading(false);
-        navigate(selectedRole === "admin" ? "/admin" : "/user");
-      } else {
+      const payload: LoginData = {
+        email: formData.email,
+        password: formData.password,
+      };
+
+      const response = await authApi.login(payload);
+
+      if (!response.success || !response.data) {
         throw new Error("Failed to authenticate. Please try again.");
+      }
+
+      const { accessToken, user } = response.data;
+
+      const storedUser: StoredUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        createdAt: user.createdAt,
+        name: `${user.firstName} ${user.lastName}`.trim() || user.email,
+      };
+
+      // Persist auth state
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(storedUser));
+
+      // Route based on actual role from backend, but keep current UX shortcut
+      const effectiveRole = user.role === "admin" ? "admin" : selectedRole;
+
+      if (effectiveRole === "admin") {
+        setIsLoading(false);
+        navigate("/admin");
+      } else {
+        // For normal users, check if they already have a plan
+        const hasPlan = await hasUserPlan(user.id);
+        setIsLoading(false);
+
+        if (hasPlan) {
+          navigate("/user");
+        } else {
+          navigate("/user");
+        }
       }
     } catch (err: any) {
       const errorMessage = err.message || "Login failed. Please check your credentials and try again.";

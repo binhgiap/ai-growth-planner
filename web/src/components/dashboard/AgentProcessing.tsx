@@ -4,6 +4,7 @@ import { Brain, Target, Calendar, TrendingUp, Users, CheckCircle2, Loader2, Aler
 import { AgentStatus } from "@/types/growth-plan";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { planningApi, goalsApi, tasksApi, progressApi, reportsApi } from "@/lib/api";
 
 interface AgentProcessingProps {
   onComplete: () => void;
@@ -73,7 +74,67 @@ export const AgentProcessing = ({ onComplete, error, onRetry }: AgentProcessingP
         [agent.id]: { ...prev[agent.id], status: "processing", progress: 0 },
       }));
 
-      // Simulate progress
+      // Best-effort API integration per agent (non-blocking for UI)
+      try {
+        const userStr = localStorage.getItem("user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const userId: string | undefined = user?.id;
+
+        if (userId) {
+          if (agent.id === "skill-gap") {
+            // Skill Gap Agent -> generate overall 6-month development plan
+            void planningApi.generatePlan(userId);
+          } else if (agent.id === "goal-planning") {
+            // Goal Planning Agent -> create a sample OBJECTIVE goal
+            void goalsApi.create(userId, {
+              title: "Master System Design",
+              description: "Learn and implement large-scale system design patterns",
+              type: "OBJECTIVE",
+              startDate: "2024-01-01",
+              targetDate: "2024-06-30",
+              priority: 1,
+              notes: "Focus on distributed systems and microservices",
+            });
+          } else if (agent.id === "daily-breakdown") {
+            // Daily Breakdown Agent -> create a sample daily task
+            void tasksApi.create(userId, {
+              title: "Read system design chapter 3",
+              description: "Focus on distributed transactions and consistency models",
+              dueDate: "2024-01-15",
+              priority: 1,
+              estimatedHours: 2,
+              goalId: "goal-uuid-123",
+              notes: "Use Notion for note-taking",
+            });
+          } else if (agent.id === "progress-tracker") {
+            // Progress Tracker Agent -> create a sample weekly progress log
+            void progressApi.create(userId, {
+              period: "WEEKLY",
+              periodStartDate: "2024-01-08",
+              periodEndDate: "2024-01-14",
+              tasksCompleted: 12,
+              tasksTotal: 15,
+              completionPercentage: 80,
+              goalsProgress: 75.5,
+              skillsImproved: 3,
+              summary:
+                "Strong progress on system design. Completed 4 major topics. On track with all goals.",
+            });
+          } else if (agent.id === "hr-summary") {
+            // HR Summary Agent -> create a sample monthly report
+            void reportsApi.create(userId, {
+              type: "MONTHLY",
+              reportPeriodStart: "2024-01-01",
+              reportPeriodEnd: "2024-01-31",
+              title: "January 2024 Progress Review",
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Agent API call failed:", e);
+      }
+
+      // Simulate progress (UI only)
       for (let i = 0; i <= 100; i += 10) {
         await new Promise((resolve) => setTimeout(resolve, 150));
         setStatuses((prev) => ({

@@ -84,6 +84,7 @@ const AdminPortal = () => {
         );
         
         setMembers(apiMembers);
+        console.log("🚀 ~ fetchUsers ~ apiMembers:", apiMembers)
       } catch (error: any) {
         // NO FALLBACK - Show error to user
         const errorMessage = error?.message || "Failed to load users. Please check your connection and try again.";

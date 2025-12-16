@@ -33,7 +33,6 @@ export const planningApi = {
   generatePlan: async (userId: string): Promise<ApiResponse<GeneratedPlan>> => {
     const url = `${API_BASE_URL}/api/planning/generate?userId=${userId}`;
     logApiCall('POST', url);
-    console.log(`[API] Making request to: ${url}`);
     const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -43,14 +42,15 @@ export const planningApi = {
 
   // Persist/save the generated plan to database
   persistPlan: async (userId: string, plan: GeneratedPlan): Promise<ApiResponse<PersistedPlan>> => {
-    const queryParams = new URLSearchParams({ userId });
-    const url = `${API_BASE_URL}/api/planning/persist?${queryParams}`;
+    const queryParams = new URLSearchParams({
+      userId,
+      plan: JSON.stringify(plan),
+    });
+    const url = `${API_BASE_URL}/api/planning/persist?${queryParams.toString()}`;
     logApiCall('POST', url, { plan });
-    console.log(`[API] Making request to: ${url}`);
     const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ plan }),
     });
     return handleApiResponse<ApiResponse<PersistedPlan>>(response, 'POST', url);
   },

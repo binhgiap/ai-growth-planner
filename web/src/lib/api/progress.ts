@@ -30,30 +30,35 @@ export interface ProgressLog {
 export const progressApi = {
   // Create a new progress log
   create: async (userId: string, data: CreateProgressLogDto): Promise<ApiResponse<ProgressLog>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<ProgressLog>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog>>(response, 'POST', url);
   },
 
   // Get all progress logs for a user
-  findByUser: async (userId: string): Promise<ApiResponse<{ data: ProgressLog[]; count: number }>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking?userId=${userId}`, {
+  findByUser: async (
+    userId: string,
+  ): Promise<ApiResponse<ProgressLog[]> & { count: number }> => {
+    const url = `${API_BASE_URL}/api/progress-tracking?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<{ data: ProgressLog[]; count: number }>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog[]> & { count: number }>(response, 'GET', url);
   },
 
   // Get logs by period
   findByPeriod: async (userId: string, period: 'DAILY' | 'WEEKLY' | 'MONTHLY'): Promise<ApiResponse<ProgressLog[]>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/period/${period}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking/period/${period}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<ProgressLog[]>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog[]>>(response, 'GET', url);
   },
 
   // Get logs by date range
@@ -64,28 +69,36 @@ export const progressApi = {
       endDate,
     });
     
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/range?${queryParams}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking/range?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<ProgressLog[]>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog[]>>(response, 'GET', url);
   },
 
   // Get latest summary
-  getLatestSummary: async (userId: string): Promise<ApiResponse<{
-    overallProgress: number;
-    completionRate: number;
-    onTrack: boolean;
-  }>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/summary/latest?userId=${userId}`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    return handleApiResponse<ApiResponse<{
+  getLatestSummary: async (
+    userId: string,
+  ): Promise<
+    ApiResponse<{
       overallProgress: number;
       completionRate: number;
       onTrack: boolean;
-    }>>(response);
+    }>
+  > => {
+    const url = `${API_BASE_URL}/api/progress-tracking/summary/latest?userId=${userId}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    return handleApiResponse<
+      ApiResponse<{
+        overallProgress: number;
+        completionRate: number;
+        onTrack: boolean;
+      }>
+    >(response, 'GET', url);
   },
 
   // Get progress trends
@@ -93,30 +106,33 @@ export const progressApi = {
     const queryParams = new URLSearchParams({ userId });
     if (days) queryParams.append('days', days.toString());
     
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/trends?${queryParams}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking/trends?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<any>>(response);
+    return handleApiResponse<ApiResponse<any>>(response, 'GET', url);
   },
 
   // Get progress log by ID
   findById: async (id: string, userId: string): Promise<ApiResponse<ProgressLog>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<ProgressLog>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog>>(response, 'GET', url);
   },
 
   // Update progress log
   update: async (id: string, userId: string, data: Partial<CreateProgressLogDto>): Promise<ApiResponse<ProgressLog>> => {
-    const response = await fetch(`${API_BASE_URL}/api/progress-tracking/${id}?userId=${userId}`, {
+    const url = `${API_BASE_URL}/api/progress-tracking/${id}?userId=${userId}`;
+    const response = await fetch(url, {
       method: 'PATCH',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     });
-    return handleApiResponse<ApiResponse<ProgressLog>>(response);
+    return handleApiResponse<ApiResponse<ProgressLog>>(response, 'PATCH', url);
   },
 
   // Delete progress log
