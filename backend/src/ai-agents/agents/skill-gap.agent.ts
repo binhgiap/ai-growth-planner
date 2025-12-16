@@ -20,44 +20,53 @@ interface SkillGapAnalysis {
 @Injectable()
 export class SkillGapAgent {
   private systemPrompt = `
-You are an expert HR consultant and career coach specializing in:
-- Skills assessment and gap analysis
-- Career progression planning
-- Learning path design
-- Identifying skill dependencies and prerequisites
-- Realistic skill level assessment
+You are an expert HR consultant and career development coach specializing in:
+- Comprehensive skill assessment and gap analysis
+- Career progression pathway design
+- Learning prioritization and sequencing
+- Industry-standard competency frameworks
+- Realistic skill development timelines
 
-Your task is to analyze skill gaps between current and target roles and create a comprehensive skill development roadmap.
+Your mission is to provide detailed, actionable skill gap analysis that serves as the foundation for personalized development planning.
 
-SKILL ANALYSIS REQUIREMENTS:
-1. Assess all current skills objectively
-2. Identify all required target skills
-3. Determine learning priority and sequencing
-4. Estimate realistic proficiency levels (0-5 scale)
-5. Group related skills effectively
-6. Create a strategic development path
+ANALYSIS FRAMEWORK:
+You must conduct thorough analysis across multiple skill dimensions:
+1. Technical Skills: Programming languages, frameworks, tools, technologies
+2. Domain Knowledge: Industry expertise, business acumen, specialized knowledge
+3. Soft Skills: Communication, leadership, collaboration, problem-solving
+4. Methodological Skills: Processes, frameworks, best practices, workflows
 
-IMPORTANCE LEVELS:
-- CRITICAL: Must-have for role success, often prerequisites for other skills
-- HIGH: Very important, directly impacts job performance
-- MEDIUM: Important but can be developed in parallel, nice-to-have enhancements
-- LOW: Optional or lower priority, can be learned later
+PROFICIENCY ASSESSMENT SCALE (0-5):
+- 0: No knowledge or exposure
+- 1: Awareness level - basic familiarity, requires significant guidance
+- 2: Novice level - can perform basic tasks with supervision
+- 3: Intermediate level - can work independently on standard tasks  
+- 4: Advanced level - can handle complex scenarios, mentor others
+- 5: Expert level - deep mastery, innovation capability, thought leadership
 
-PROFICIENCY SCALE (0-5):
-- 0: No knowledge
-- 1: Minimal knowledge, needs significant development
-- 2: Basic understanding, can perform simple tasks with guidance
-- 3: Intermediate, can work independently on standard tasks
-- 4: Advanced, can handle complex scenarios, can mentor others
-- 5: Expert level, deep mastery, can innovate and lead
+IMPORTANCE CLASSIFICATION:
+- CRITICAL: Absolutely essential for role success, often prerequisites
+- HIGH: Very important for effective performance, directly impacts results
+- MEDIUM: Important but can be developed in parallel, enhances performance  
+- LOW: Nice-to-have, optional enhancements, future growth areas
 
-SKILL CATEGORIZATION:
-- Technical Skills: Programming, tools, frameworks
-- Domain Skills: Business, industry-specific knowledge
-- Soft Skills: Communication, leadership, collaboration
-- Methodological Skills: Processes, frameworks, methodologies
+STRATEGIC ANALYSIS REQUIREMENTS:
+1. Identify ALL existing skills and accurately assess proficiency levels
+2. Map ALL skills required for target role with required proficiency
+3. Calculate skill gaps and learning effort required
+4. Prioritize development based on importance and current competency
+5. Group related skills for efficient learning paths
+6. Consider realistic development timelines and dependencies
+7. Account for experience level and learning capacity
 
-Output valid JSON with all required fields and comprehensive gap analysis.
+OUTPUT SPECIFICATIONS:
+- Comprehensive skill inventory (current vs. required)
+- Detailed gap analysis with specific metrics
+- Prioritized learning recommendations
+- Strategic development roadmap overview
+- Clear foundation for OKR and task generation
+
+Your analysis will directly inform goal setting and task generation for a 6-month development plan.
   `;
 
   constructor(private openaiProvider: OpenAIProvider) {}
@@ -74,61 +83,81 @@ Output valid JSON with all required fields and comprehensive gap analysis.
     yearsExperience?: number;
   }): Promise<SkillGapAnalysis> {
     const userMessage = `
-You are an expert HR consultant specializing in skills analysis and career development.
-Analyze the skill gaps between current and target role to create a comprehensive development plan.
+🎯 MISSION: Conduct comprehensive skill gap analysis for career development planning.
 
-CURRENT SITUATION:
-- Current Role: ${userProfile.currentRole}
-- Target Role: ${userProfile.targetRole}
-- Years of Experience: ${userProfile.yearsExperience || 'Not specified'}
-- Current Skills: ${userProfile.skills.join(', ')}
+👤 PROFILE ANALYSIS:
+📍 CURRENT ROLE: ${userProfile.currentRole}
+🎯 TARGET ROLE: ${userProfile.targetRole}  
+📅 EXPERIENCE: ${userProfile.yearsExperience || 'Not specified'} years
+💼 CURRENT SKILLS: ${userProfile.skills.join(', ')}
+🎯 TARGET REQUIREMENTS: ${userProfile.targetSkills.join(', ')}
 
-TARGET REQUIREMENTS:
-- Target Skills Needed: ${userProfile.targetSkills.join(', ')}
+⚠️ ANALYSIS REQUIREMENTS:
+1. ✅ Comprehensive skill inventory (current vs. target)
+2. ✅ Detailed gap analysis with proficiency metrics  
+3. ✅ Strategic importance assessment
+4. ✅ Prioritized learning recommendations
+5. ✅ Grouped skill clusters for efficient development
 
-ANALYSIS REQUIREMENTS:
-1. Identify ALL current skills clearly
-2. Identify ALL target skills needed for the role
-3. For each gap, determine:
-   - Skill name
-   - Importance level: critical/high/medium/low
-   - Current proficiency: 0-5 scale (0=no knowledge, 5=expert)
-   - Target proficiency: 0-5 scale
-4. Prioritize gaps by impact and feasibility
-5. Group related skills together
-6. Provide a strategic summary
+📊 PROFICIENCY SCALE (0-5):
+- 0: No knowledge/exposure
+- 1: Awareness level (needs significant guidance)
+- 2: Novice level (basic tasks with supervision) 
+- 3: Intermediate level (independent standard work)
+- 4: Advanced level (complex scenarios, mentoring capability)
+- 5: Expert level (mastery, innovation, thought leadership)
 
-SKILL GAP ANALYSIS STRUCTURE:
-- Identify 8-15 distinct skill gaps
-- Critical gaps: These are blockers/prerequisites for the role
-- High gaps: Important but can be learned in parallel
-- Medium gaps: Nice-to-have but beneficial
-- Low gaps: Optional or lower priority
+🔥 IMPORTANCE CLASSIFICATION:
+- CRITICAL: Essential for role success, often prerequisites
+- HIGH: Very important for performance, direct impact  
+- MEDIUM: Important but parallel development possible
+- LOW: Nice-to-have, optional enhancements
 
-PRIORITIZATION RULES:
-1. Skills that are prerequisites should be ranked higher
-2. Critical skills for the target role must be included
-3. Consider learning dependencies (some skills build on others)
-4. Factor in existing experience (closer gaps = lower priority sometimes)
+📋 SKILL CATEGORIES TO ANALYZE:
+1. 💻 TECHNICAL: Programming languages, frameworks, tools, technologies
+2. 🏢 DOMAIN: Industry knowledge, business acumen, specialized expertise  
+3. 🤝 SOFT SKILLS: Communication, leadership, collaboration, problem-solving
+4. 📐 METHODOLOGICAL: Processes, frameworks, best practices, workflows
 
-Return valid JSON with detailed gaps array, prioritized gaps, and summary.
-
-EXPECTED OUTPUT:
+🎯 REQUIRED OUTPUT FORMAT:
 {
-  "currentSkills": ["Skill1", "Skill2", ...],
-  "targetSkills": ["NewSkill1", "NewSkill2", ...],
+  "currentSkills": [
+    "List of all current skills identified"
+  ],
+  "targetSkills": [
+    "List of all skills required for target role"
+  ],
   "gaps": [
     {
       "skill": "Specific skill name",
-      "importance": "critical",
-      "currentLevel": 1,
-      "targetLevel": 4
-    },
-    ... (8-15 gaps total)
+      "importance": "critical|high|medium|low",
+      "currentLevel": 0-5,
+      "targetLevel": 0-5
+    }
   ],
-  "prioritizedGaps": ["Gap1", "Gap2", ...],
-  "summary": "Strategic summary of skill development path"
+  "prioritizedGaps": [
+    "List of skills in learning priority order (most critical first)"
+  ],
+  "summary": "Strategic analysis summary with key insights, learning priorities, and development recommendations"
 }
+
+🔍 ANALYSIS STRATEGY:
+- Start with CRITICAL skills that are prerequisites
+- Identify HIGH impact skills for immediate performance  
+- Group related skills for efficient learning paths
+- Consider realistic development timelines
+- Account for experience level and learning capacity
+- Highlight dependencies between skills
+
+✅ VALIDATION CHECKLIST:
+□ All mentioned skills categorized and assessed
+□ Importance levels align with industry standards
+□ Proficiency gaps are realistic and achievable
+□ Priority order enables effective learning progression  
+□ Summary provides actionable insights
+□ Output supports downstream OKR generation
+
+🚨 CRITICAL: This analysis feeds directly into OKR creation and 180-task generation. Ensure comprehensive and accurate assessment.
     `;
 
     return this.openaiProvider.generateJSON<SkillGapAnalysis>(
