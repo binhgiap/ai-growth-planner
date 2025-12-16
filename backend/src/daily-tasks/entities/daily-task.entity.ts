@@ -33,10 +33,10 @@ export class DailyTask {
   @Column({ type: 'int', default: 1 })
   priority: number; // 1-5
 
-  @Column({ type: 'int', default: 1 })
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 1 })
   estimatedHours: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   actualHours: number;
 
   @Column({ type: 'text', nullable: true })
