@@ -28,6 +28,20 @@ const roles = [
 
 const levels = ["Junior", "Middle", "Senior", "Lead", "Principal"];
 
+// Current level options (exclude Principal since it's the highest level)
+const currentLevels = ["Junior", "Middle", "Senior", "Lead"];
+
+// Get available target levels based on current level
+const getAvailableTargetLevels = (currentLevel: string): string[] => {
+  if (!currentLevel) return levels;
+  
+  const currentIndex = levels.findIndex(level => level.toLowerCase() === currentLevel.toLowerCase());
+  if (currentIndex === -1) return levels;
+  
+  // Return only levels higher than current level
+  return levels.slice(currentIndex + 1);
+};
+
 export const OnboardingForm = ({ onSubmit, onBack }: OnboardingFormProps) => {
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState<UserProfile>({
@@ -151,15 +165,21 @@ export const OnboardingForm = ({ onSubmit, onBack }: OnboardingFormProps) => {
                     <Label htmlFor="level">Current Level</Label>
                     <Select
                       value={profile.currentLevel}
-                      onValueChange={(value) =>
-                        setProfile({ ...profile, currentLevel: value })
-                      }
+                      onValueChange={(value) => {
+                        const newProfile = { ...profile, currentLevel: value };
+                        // Reset targetLevel if it's no longer valid
+                        const availableTargets = getAvailableTargetLevels(value);
+                        if (newProfile.targetLevel && !availableTargets.includes(newProfile.targetLevel)) {
+                          newProfile.targetLevel = "";
+                        }
+                        setProfile(newProfile);
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select level" />
                       </SelectTrigger>
                       <SelectContent>
-                        {levels.map((level) => (
+                        {currentLevels.map((level) => (
                           <SelectItem key={level} value={level}>
                             {level}
                           </SelectItem>
@@ -201,13 +221,18 @@ export const OnboardingForm = ({ onSubmit, onBack }: OnboardingFormProps) => {
                         <SelectValue placeholder="Select target level" />
                       </SelectTrigger>
                       <SelectContent>
-                        {levels.map((level) => (
+                        {getAvailableTargetLevels(profile.currentLevel).map((level) => (
                           <SelectItem key={level} value={level}>
                             {level}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {profile.currentLevel && getAvailableTargetLevels(profile.currentLevel).length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        You are already at the highest level. Please select a lower current level to set a target.
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

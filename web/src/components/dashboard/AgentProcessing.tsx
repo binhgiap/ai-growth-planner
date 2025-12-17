@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Brain, Target, Calendar, TrendingUp, Users, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Brain, Target, Calendar, TrendingUp, Users, CheckCircle2, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { AgentStatus } from "@/types/growth-plan";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -59,9 +59,15 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
       [agent.id]: { name: agent.name, status: "idle", progress: 0 },
     }), {})
   );
+  const [isStopped, setIsStopped] = useState(false);
 
   useEffect(() => {
     const processAgent = async (index: number) => {
+      // Stop processing if an error occurred
+      if (isStopped) {
+        return;
+      }
+
       if (index >= agents.length) {
         setTimeout(onComplete, 500);
         return;
@@ -149,7 +155,7 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
           if (userId) {
             if (agent.id === "progress-tracker") {
               // Progress Tracker Agent -> create a sample weekly progress log
-              void progressApi.create(userId, {
+              await progressApi.create(userId, {
                 period: "WEEKLY",
                 periodStartDate: "2024-01-08",
                 periodEndDate: "2024-01-14",
@@ -163,7 +169,7 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
               });
             } else if (agent.id === "hr-summary") {
               // HR Summary Agent -> create a sample monthly report
-              void reportsApi.create(userId, {
+              await reportsApi.create(userId, {
                 type: "MONTHLY",
                 reportPeriodStart: "2024-01-01",
                 reportPeriodEnd: "2024-01-31",
@@ -174,6 +180,7 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
 
           // Simulate progress for legacy agents (UI only)
           for (let i = 20; i <= 100; i += 20) {
+            if (isStopped) break;
             await new Promise((resolve) => setTimeout(resolve, 200));
             setStatuses((prev) => ({
               ...prev,
@@ -185,6 +192,9 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
         console.error(`Agent ${agent.id} API call failed:`, e);
         apiError = e instanceof Error ? e : new Error(String(e));
         const errorMessage = apiError?.message || "An error occurred";
+        
+        // Stop processing immediately
+        setIsStopped(true);
         
         // Update status to show error
         setStatuses((prev) => ({
@@ -202,15 +212,12 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
           onError(errorMessage, agent.id);
         }
 
-        // Stop processing if it's one of the first 3 critical steps
-        if (["skill-gap", "goal-planning", "daily-breakdown"].includes(agent.id)) {
-          // Don't proceed to next agent if a critical step failed
-          return;
-        }
+        // Stop processing - don't proceed to next agent
+        return;
       }
 
-      // Complete the step (if no error or if it's a legacy agent)
-      if (!apiError || !["skill-gap", "goal-planning", "daily-breakdown"].includes(agent.id)) {
+      // Complete the step only if no error occurred and processing hasn't been stopped
+      if (!apiError && !isStopped) {
         setStatuses((prev) => ({
           ...prev,
           [agent.id]: { ...prev[agent.id], status: "complete", progress: 100 },
@@ -221,8 +228,10 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
       }
     };
 
-    processAgent(0);
-  }, [onComplete, onError]);
+    if (!isStopped) {
+      processAgent(0);
+    }
+  }, [onComplete, onError, isStopped]);
 
   return (
     <section className="min-h-screen flex items-center justify-center py-8 md:py-20 px-4">
@@ -246,7 +255,8 @@ export const AgentProcessing = ({ onComplete, error, onRetry, onError }: AgentPr
             <AlertTitle>Error</AlertTitle>
             <AlertDescription className="mb-4">{error}</AlertDescription>
             {onRetry && (
-              <Button onClick={onRetry} variant="outline" size="sm" className="mt-2">
+              <Button onClick={onRetry} variant="outline" size="sm" className="mt-2 flex items-center gap-2 !pl-3">
+                <RefreshCw className="w-4 h-4" />
                 Retry
               </Button>
             )}

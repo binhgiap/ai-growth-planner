@@ -1,4 +1,6 @@
 import { API_BASE_URL, getAuthHeaders, handleApiResponse, ApiResponse, logApiCall } from './config';
+import type { Goal } from './goals';
+import type { DailyTask } from './tasks';
 
 export interface GeneratedPlan {
   skillGap: {
@@ -138,6 +140,61 @@ export const planningApi = {
       headers: getAuthHeaders(),
     });
     return handleApiResponse<ApiResponse<PersistedPlan>>(response, 'POST', url);
+  },
+
+  // Cancel planning: Call backend cancel endpoint
+  cancel: async (): Promise<ApiResponse<{ message: string }>> => {
+    const url = `${API_BASE_URL}/api/planning/cancel`;
+    logApiCall('POST', url);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleApiResponse<ApiResponse<{ message: string }>>(response, 'POST', url);
+  },
+
+  // Cancel planning: Delete all goals and tasks for a user (fallback if cancel endpoint doesn't exist)
+  cancelPlanning: async (userId: string): Promise<void> => {
+    const { goalsApi, tasksApi } = await import('./index');
+    
+    try {
+      // Fetch all goals and tasks
+      const [goalsResponse, tasksResponse] = await Promise.all([
+        goalsApi.findByUser(userId).catch(() => ({ success: false, data: [] as Goal[], count: 0 })),
+        tasksApi.findByUser(userId).catch(() => ({ success: false, data: [] as DailyTask[] })),
+      ]);
+
+      // Handle goals response - findByUser returns ApiResponse<Goal[]> & { count: number }
+      const goals: Goal[] = goalsResponse?.success && Array.isArray(goalsResponse.data)
+        ? goalsResponse.data
+        : [];
+
+      // Handle tasks response - findByUser returns ApiResponse<DailyTask[]>
+      const tasks: DailyTask[] = tasksResponse?.success && Array.isArray(tasksResponse.data)
+        ? tasksResponse.data
+        : [];
+
+      // Delete all goals
+      await Promise.all(
+        goals.map((goal) => 
+          goalsApi.delete(goal.id, userId).catch(err => {
+            console.warn(`Failed to delete goal ${goal.id}:`, err);
+          })
+        )
+      );
+
+      // Delete all tasks
+      await Promise.all(
+        tasks.map((task) => 
+          tasksApi.delete(task.id, userId).catch(err => {
+            console.warn(`Failed to delete task ${task.id}:`, err);
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Error canceling planning:', error);
+      throw error;
+    }
   },
 };
 

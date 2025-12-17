@@ -1,36 +1,87 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { HeroSection } from "@/components/landing/HeroSection";
 import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
 import { AgentProcessing } from "@/components/dashboard/AgentProcessing";
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { UserProfile, GrowthPlan } from "@/types/growth-plan";
-import { tasksApi } from "@/lib/api";
+import { tasksApi, goalsApi, usersApi, planningApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { loadPlanFromAPI, persistPlanToAPI, convertApiPlanToGrowthPlan } from "@/lib/utils/api-converters";
 
 type AppState = "landing" | "onboarding" | "processing" | "dashboard";
 
 const UserDashboard = () => {
+  const navigate = useNavigate();
   const [appState, setAppState] = useState<AppState>("landing");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [growthPlan, setGrowthPlan] = useState<GrowthPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<{ currentRole: string; targetRole: string; currentLevel?: string; targetLevel?: string } | null>(null);
   const { toast } = useToast();
+  const hasCheckedGoals = useRef(false);
 
   // Load plan from API only (no localStorage)
   useEffect(() => {
+    // Prevent multiple calls
+    if (hasCheckedGoals.current) {
+      return;
+    }
+    hasCheckedGoals.current = true;
+
     const loadPlan = async () => {
       // Get current user
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : null;
       
       if (!user || !user.id) {
+        // Not authenticated, redirect will be handled by ProtectedRoute
         setIsLoading(false);
         return;
       }
 
       const userId = user.id;
+      
+      // Check goals first - if not available, show landing page
+      try {
+        const goalsResponse = await goalsApi.findByUser(userId);
+        const goals = goalsResponse?.data;
+        
+        // Check if goals is not an array or is an empty array
+        if (!Array.isArray(goals) || goals.length === 0) {
+          // No goals available - show landing page
+          setAppState("landing");
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        // If fetching goals fails, show landing page
+        console.warn("Failed to fetch goals:", error);
+        setAppState("landing");
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch user profile info for header display
+      try {
+        const profileResponse = await usersApi.getProfile(userId);
+        if (profileResponse?.data) {
+          setUserInfo({
+            currentRole: profileResponse.data.currentRole || "",
+            targetRole: profileResponse.data.targetRole || "",
+            currentLevel: "", // Can be added if available in API
+            targetLevel: "", // Can be added if available in API
+          });
+        }
+      } catch (error) {
+        console.warn("Failed to fetch user profile:", error);
+        // Fallback to localStorage user data
+        setUserInfo({
+          currentRole: user.currentRole || "",
+          targetRole: user.targetRole || "",
+        });
+      }
       
       try {
         // Create default profile from user data
@@ -65,6 +116,7 @@ const UserDashboard = () => {
     };
 
     loadPlan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGetStarted = () => {
@@ -74,6 +126,11 @@ const UserDashboard = () => {
   const handleOnboardingSubmit = (profile: UserProfile) => {
     setUserProfile(profile);
     setAppState("processing");
+  };
+
+  const handleProcessingError = (error: string, agentId: string) => {
+    setError(`Failed at ${agentId}: ${error}`);
+    // Stop processing - stay on processing screen to show error
   };
 
   const handleProcessingComplete = async () => {
@@ -214,15 +271,28 @@ const UserDashboard = () => {
         <AgentProcessing 
           onComplete={handleProcessingComplete} 
           error={error}
-          onRetry={error ? () => {
+          onRetry={error ? async () => {
+            try {
+              // Always call cancel API
+              await planningApi.cancel().catch(err => {
+                // Log error but continue - we'll navigate to landing page anyway
+                console.warn("Cancel API call failed (may not exist yet):", err);
+              });
+            } catch (error) {
+              // Ignore errors - we'll navigate to landing page anyway
+              console.warn("Error calling cancel API:", error);
+            }
+
+            // Always navigate to landing page regardless of cancel success/failure
             setError(null);
-            handleProcessingComplete();
+            setAppState("landing");
           } : undefined}
+          onError={handleProcessingError}
         />
       )}
 
       {appState === "dashboard" && growthPlan && (
-        <DashboardOverview plan={growthPlan} onUpdateTask={handleUpdateTask} />
+        <DashboardOverview plan={growthPlan} onUpdateTask={handleUpdateTask} userInfo={userInfo} />
       )}
     </div>
   );

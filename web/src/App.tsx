@@ -9,6 +9,8 @@ import UserProfilePage from "./pages/user/UserProfilePage";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 import { ApiStatus } from "@/components/debug/ApiStatus";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PublicRoute } from "@/components/auth/PublicRoute";
 
 const queryClient = new QueryClient();
 
@@ -19,10 +21,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/user" element={<UserDashboard />} />
-          <Route path="/user/profile" element={<UserProfilePage />} />
-          <Route path="/admin/*" element={<AdminPortal />} />
+          <Route path="/" element={<PublicRoute><Index /></PublicRoute>} />
+          <Route path="/user" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+          <Route path="/user/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
+          <Route path="/admin/*" element={<ProtectedRoute><AdminPortal /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -55,19 +55,35 @@ export const OKRsView = ({ plan, onBack }: OKRsViewProps) => {
             <div className="flex justify-between text-sm mb-2">
               <span className="text-muted-foreground">Overall Progress</span>
               <span className="font-medium">
-                {Math.round(plan.okrs.reduce((acc, okr) => acc + okr.progress, 0) / plan.okrs.length)}%
+                {plan.okrs.length === 0 
+                  ? "0%" 
+                  : `${Math.round(
+                      plan.okrs.reduce((acc, okr) => acc + (isNaN(okr.progress) ? 0 : okr.progress), 0) / plan.okrs.length
+                    )}%`
+                }
               </span>
             </div>
             <Progress 
-              value={Math.round(plan.okrs.reduce((acc, okr) => acc + okr.progress, 0) / plan.okrs.length)} 
+              value={
+                plan.okrs.length === 0 
+                  ? 0 
+                  : Math.max(0, Math.min(100, Math.round(
+                      plan.okrs.reduce((acc, okr) => acc + (isNaN(okr.progress) ? 0 : okr.progress), 0) / plan.okrs.length
+                    )))
+              } 
               className="h-3" 
             />
           </div>
         </motion.div>
 
         {/* OKRs Timeline */}
-        <div className="space-y-4 md:space-y-6">
-          {plan.okrs.map((okr, index) => (
+        {plan.okrs.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No OKRs available</p>
+          </div>
+        ) : (
+          <div className="space-y-4 md:space-y-6">
+            {plan.okrs.map((okr, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, x: -20 }}
@@ -79,7 +95,7 @@ export const OKRsView = ({ plan, onBack }: OKRsViewProps) => {
                 {/* Month Indicator */}
                 <div className="flex flex-col items-center shrink-0">
                   <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center ${
-                    okr.progress === 100 
+                    (isNaN(okr.progress) ? 0 : okr.progress) === 100 
                       ? "bg-primary text-primary-foreground" 
                       : "bg-secondary"
                   }`}>
@@ -97,49 +113,59 @@ export const OKRsView = ({ plan, onBack }: OKRsViewProps) => {
                       Month {okr.month}
                     </h3>
                     <span className={`text-xs md:text-sm font-medium shrink-0 ${
-                      okr.progress === 100 ? "text-primary" : "text-muted-foreground"
+                      (isNaN(okr.progress) ? 0 : okr.progress) === 100 ? "text-primary" : "text-muted-foreground"
                     }`}>
-                      {okr.progress}%
+                      {isNaN(okr.progress) ? 0 : okr.progress}%
                     </span>
                   </div>
 
                   {/* Objective */}
                   <div className="bg-secondary/50 rounded-lg p-3 md:p-4 mb-3 md:mb-4">
                     <p className="text-xs md:text-sm text-muted-foreground mb-1">Objective</p>
-                    <p className="font-medium text-sm md:text-base break-words">{okr.objective}</p>
+                    <p className="font-medium text-sm md:text-base break-words">
+                      {okr.objective || "No objective set"}
+                    </p>
                   </div>
 
                   {/* Key Results */}
                   <div className="space-y-2 md:space-y-3">
                     <p className="text-xs md:text-sm text-muted-foreground">Key Results:</p>
-                    {okr.keyResults.map((kr, krIndex) => (
+                    {okr.keyResults && okr.keyResults.length > 0 ? (
+                      okr.keyResults.map((kr, krIndex) => (
                       <div 
                         key={krIndex}
                         className="flex items-start gap-2 md:gap-3 p-2 md:p-3 rounded-lg bg-card border border-border"
                       >
                         <div className={`w-4 h-4 md:w-5 md:h-5 rounded-full border-2 flex items-center justify-center mt-0.5 shrink-0 ${
-                          okr.progress > (krIndex + 1) * (100 / okr.keyResults.length)
+                          (isNaN(okr.progress) ? 0 : okr.progress) > (krIndex + 1) * (100 / (okr.keyResults.length || 1))
                             ? "bg-primary border-primary"
                             : "border-muted-foreground"
                         }`}>
-                          {okr.progress > (krIndex + 1) * (100 / okr.keyResults.length) && (
+                          {(isNaN(okr.progress) ? 0 : okr.progress) > (krIndex + 1) * (100 / (okr.keyResults.length || 1)) && (
                             <CheckCircle2 className="w-2.5 h-2.5 md:w-3 md:h-3 text-primary-foreground" />
                           )}
                         </div>
                         <p className="text-xs md:text-sm flex-1 break-words">{kr}</p>
                       </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-xs md:text-sm text-muted-foreground italic">No key results set</p>
+                    )}
                   </div>
 
                   {/* Progress Bar */}
                   <div className="mt-4">
-                    <Progress value={okr.progress} className="h-2" />
+                    <Progress 
+                      value={isNaN(okr.progress) ? 0 : Math.max(0, Math.min(100, okr.progress))} 
+                      className="h-2" 
+                    />
                   </div>
                 </div>
               </div>
             </motion.div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );

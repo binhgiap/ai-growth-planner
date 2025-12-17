@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Brain, Target, Calendar, TrendingUp, Users, Shield } from "lucide-react";
+import { ArrowRight, Sparkles, Brain, Target, Calendar, TrendingUp, Users, Shield, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -9,6 +10,21 @@ interface HeroSectionProps {
 
 export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
   const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const accessToken = localStorage.getItem("accessToken");
+    const user = localStorage.getItem("user");
+    setIsLoggedIn(!!(accessToken && user));
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    navigate("/");
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -70,6 +86,17 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
             transition={{ delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
           >
+            {isLoggedIn && (
+              <Button 
+                variant="outline" 
+                size="xl" 
+                onClick={handleLogout}
+                className="glass-card border-border hover:border-primary/50 transition-all duration-300"
+              >
+                <LogOut className="w-5 h-5 mr-2" />
+                Try later
+              </Button>
+            )}
             <Button variant="hero" size="xl" onClick={onGetStarted}>
               Get Started
               <ArrowRight className="w-5 h-5" />
