@@ -176,10 +176,10 @@ export const loadPlanFromAPI = async (
         progress: goal.progress || 0,
       }));
 
-    // Convert tasks
+    // Convert tasks - assign 1 task per day
     const dailyTasks: DailyTask[] = tasks.map((task, index) => ({
       id: task.id,
-      day: Math.floor(index / 3) + 1, // Distribute tasks across days
+      day: index + 1, // Each task gets its own day (1 task per day)
       date: task.dueDate,
       title: task.title,
       description: task.description || "",
