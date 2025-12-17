@@ -25,11 +25,9 @@ import {
   CreateDailyTaskDto,
   UpdateDailyTaskDto,
 } from './dto/create-daily-task.dto';
-import { JwtAuthGuard, RolesGuard } from '@auth/guards/auth.guard';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
 import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
-import { UserRole } from '@/users/entities/user.entity';
-import { Roles } from '@auth/decorators/roles.decorator';
 
 /**
  * DailyTaskController handles HTTP requests for daily task management
@@ -242,11 +240,10 @@ export class DailyTaskController {
   }
 
   /**
-   * GET /daily-tasks - Get all tasks for a user admin
+   * GET /daily-tasks/user - Get all tasks for a user admin
    */
   @Get('/user')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all tasks for a user admin' })
   @ApiQuery({

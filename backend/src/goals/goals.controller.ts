@@ -22,11 +22,9 @@ import {
 } from '@nestjs/swagger';
 import { GoalService } from './goals.service';
 import { CreateGoalDto, UpdateGoalDto } from './dto/create-goal.dto';
-import { JwtAuthGuard, RolesGuard } from '@auth/guards/auth.guard';
+import { JwtAuthGuard } from '@auth/guards/auth.guard';
 import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
-import { UserRole } from '@/users/entities/user.entity';
-import { Roles } from '@/auth/decorators/roles.decorator';
 
 /**
  * GoalController handles HTTP requests for goal management
@@ -123,8 +121,7 @@ export class GoalController {
    * GET /goals - Get all goals for a user admin
    */
   @Get('/user')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all goals for a user admin' })
   @ApiQuery({
