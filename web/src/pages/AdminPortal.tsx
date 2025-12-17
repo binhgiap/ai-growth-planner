@@ -14,6 +14,8 @@ import {
 } from "@/data/mock-team";
 import { usersApi, goalsApi, tasksApi } from "@/lib/api";
 import { TeamMember, NFT } from "@/types/admin";
+import { loadPlanFromAPI } from "@/lib/utils/api-converters";
+import { UserProfile } from "@/types/growth-plan";
 
 const AdminPortal = () => {
   const navigate = useNavigate();
@@ -69,21 +71,30 @@ const AdminPortal = () => {
             
             const nftCount = mappedNFTs.length;
             
+            // Create user profile from API user data
+            const userProfile: UserProfile = {
+              role: apiUser.currentRole || "",
+              currentLevel: "Middle", // Default - could be extracted from role if available
+              dailyTime: apiUser.hoursPerWeek ? apiUser.hoursPerWeek / 7 : 2,
+              targetGoal: apiUser.targetRole || "",
+              targetLevel: "Senior", // Default - could be extracted from targetRole if available
+            };
+            
+            // Load growth plan from API (goals + tasks)
             try {
-              const [goalsRes, tasksRes] = await Promise.all([
-                goalsApi.findByUser(apiUser.id).catch(() => null),
-                tasksApi.findByUser(apiUser.id).catch(() => null),
-              ]);
-              
-              const goals = goalsRes?.success ? goalsRes.data.data || [] : [];
-              const tasks = tasksRes?.success ? tasksRes.data || [] : [];
-              const completedTasks = tasks.filter(t => t.completed || t.status === "COMPLETED").length;
-              
-              // Growth plan would be loaded here if needed
-              // For now, we'll keep it null and focus on NFTs
+              growthPlan = await loadPlanFromAPI(apiUser.id, userProfile);
+              if (growthPlan) {
+                console.log(`[Admin] Loaded growth plan for user ${apiUser.id}:`, {
+                  okrs: growthPlan.okrs.length,
+                  tasks: growthPlan.dailyTasks.length,
+                  consistencyScore: growthPlan.consistencyScore,
+                });
+              } else {
+                console.log(`[Admin] No growth plan found for user ${apiUser.id}`);
+              }
             } catch (error) {
-              console.warn(`Failed to load data for user ${apiUser.id}:`, error);
-              // Don't throw - continue with default values
+              console.warn(`Failed to load growth plan for user ${apiUser.id}:`, error);
+              // Don't throw - continue with null growth plan
             }
             
             return {
@@ -91,13 +102,7 @@ const AdminPortal = () => {
               name: `${apiUser.firstName} ${apiUser.lastName}`.trim() || apiUser.email,
               email: apiUser.email,
               department: "Engineering", // Default, can be added to user model
-              profile: {
-                role: apiUser.currentRole || "",
-                currentLevel: "Middle", // Default
-                dailyTime: apiUser.hoursPerWeek ? apiUser.hoursPerWeek / 7 : 2,
-                targetGoal: apiUser.targetRole || "",
-                targetLevel: "Senior", // Default
-              },
+              profile: userProfile,
               growthPlan,
               joinedAt: apiUser.createdAt,
               lastActive: apiUser.updatedAt,

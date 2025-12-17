@@ -40,10 +40,14 @@ export const TeamMembersList = ({ members, onViewMember }: TeamMembersListProps)
         return (b.growthPlan?.consistencyScore || 0) - (a.growthPlan?.consistencyScore || 0);
       }
       if (sortBy === "progress") {
-        const aProgress = a.growthPlan ? 
-          a.growthPlan.dailyTasks.filter(t => t.completed).length / a.growthPlan.dailyTasks.length : 0;
-        const bProgress = b.growthPlan ? 
-          b.growthPlan.dailyTasks.filter(t => t.completed).length / b.growthPlan.dailyTasks.length : 0;
+        const aTasks = a.growthPlan?.dailyTasks || [];
+        const aProgress = aTasks.length > 0
+          ? aTasks.filter(t => t.completed).length / aTasks.length
+          : 0;
+        const bTasks = b.growthPlan?.dailyTasks || [];
+        const bProgress = bTasks.length > 0
+          ? bTasks.filter(t => t.completed).length / bTasks.length
+          : 0;
         return bProgress - aProgress;
       }
       return 0;
@@ -106,8 +110,15 @@ export const TeamMembersList = ({ members, onViewMember }: TeamMembersListProps)
         className="grid gap-4"
       >
         {filteredMembers.map((member, i) => {
-          const progress = member.growthPlan ? 
-            Math.round((member.growthPlan.dailyTasks.filter(t => t.completed).length / member.growthPlan.dailyTasks.length) * 100) : 0;
+          const dailyTasks = member.growthPlan?.dailyTasks || [];
+          const completedTasks = dailyTasks.filter(t => t.completed).length;
+          const totalTasks = dailyTasks.length;
+          let progress = 0;
+          if (totalTasks > 0) {
+            const progressPercent = (completedTasks / totalTasks) * 100;
+            progress = isNaN(progressPercent) ? 0 : Math.round(progressPercent);
+            progress = Math.max(0, Math.min(100, progress)); // Clamp between 0 and 100
+          }
 
           return (
             <motion.div

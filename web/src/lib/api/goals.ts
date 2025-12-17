@@ -54,7 +54,8 @@ export const goalsApi = {
     const queryParams = new URLSearchParams({ userId });
     if (status) queryParams.append('status', status);
 
-    const url = `${API_BASE_URL}/api/goals?${queryParams}`;
+    // Use /user endpoint for admin portal
+    const url = `${API_BASE_URL}/api/goals/user?${queryParams}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),

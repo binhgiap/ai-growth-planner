@@ -20,6 +20,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
     password: "",
     name: "",
     confirmPassword: "",
+    walletAddress: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -36,6 +37,11 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
 
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (!formData.walletAddress || formData.walletAddress.trim() === "") {
+      setError("Wallet address is required");
       return;
     }
 
@@ -58,6 +64,7 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
         password: formData.password,
         firstName,
         lastName,
+        walletAddress: formData.walletAddress.trim(),
         currentRole: "",
         targetRole: "",
       };
@@ -181,6 +188,18 @@ export const RegisterForm = ({ onSwitchToLogin }: RegisterFormProps) => {
               {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="walletAddress">Wallet Address*</Label>
+          <Input
+            id="walletAddress"
+            type="text"
+            placeholder="Enter your wallet address (e.g., 0x...)"
+            value={formData.walletAddress}
+            onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+            required
+          />
         </div>
 
         <Button type="submit" className="w-full" size="lg" disabled={isLoading}>

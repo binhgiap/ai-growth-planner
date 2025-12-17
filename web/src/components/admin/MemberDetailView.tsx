@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, Calendar, Target, TrendingUp, CheckCircle2, 
@@ -10,6 +10,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { TeamMember } from "@/types/admin";
 import { NFTDetailsDialog } from "./NFTDetailsDialog";
+import { usersApi } from "@/lib/api";
+import { loadPlanFromAPI } from "@/lib/utils/api-converters";
+import { UserProfile } from "@/types/growth-plan";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, 
@@ -21,10 +24,180 @@ interface MemberDetailViewProps {
   onBack: () => void;
 }
 
+interface UserProfileData {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    currentRole: string;
+    targetRole: string;
+    hoursPerWeek?: number;
+  };
+  goals: Array<{
+    id: string;
+    title: string;
+    status: string;
+    isMintedNft: boolean;
+    progress: number;
+  }>;
+  tasksCount: number;
+  progressLogs: Array<{
+    tasksCompleted: number;
+    tasksTotal: number;
+    completionPercentage: number;
+  }>;
+  nfts: Array<{
+    tokenId: string | null;
+    contractAddress: string;
+    txHash: string;
+    description: string;
+    userInfo: string;
+    mintedAt: Date | null;
+  }>;
+}
+
 export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
   const [nftDialogOpen, setNftDialogOpen] = useState(false);
-  const plan = member.growthPlan;
+  const [profileData, setProfileData] = useState<UserProfileData | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [refreshedMember, setRefreshedMember] = useState<TeamMember | null>(null);
+
+  // Fetch user profile data when component mounts or member.id changes
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoadingProfile(true);
+      try {
+        console.log(`[Admin] Fetching profile for member: ${member.id}`);
+        const response = await usersApi.getProfile(member.id);
+        if (response.success && response.data) {
+          const profile = response.data as unknown as UserProfileData;
+          setProfileData(profile);
+          
+          console.log(`[Admin] Profile data received:`, {
+            goals: profile.goals?.length || 0,
+            tasksCount: profile.tasksCount || 0,
+            nfts: profile.nfts?.length || 0,
+          });
+
+          // Create user profile for loading growth plan
+          const userProfile: UserProfile = {
+            role: profile.user.currentRole || "",
+            currentLevel: "Middle", // Default
+            dailyTime: profile.user.hoursPerWeek ? profile.user.hoursPerWeek / 7 : 2,
+            targetGoal: profile.user.targetRole || "",
+            targetLevel: "Senior", // Default
+          };
+
+          // Load growth plan from API (goals + tasks)
+          console.log(`[Admin] Loading growth plan for member: ${member.id}`);
+          const growthPlan = await loadPlanFromAPI(member.id, userProfile);
+          
+          if (growthPlan) {
+            console.log(`[Admin] Growth plan loaded:`, {
+              okrs: growthPlan.okrs.length,
+              tasks: growthPlan.dailyTasks.length,
+              completedTasks: growthPlan.dailyTasks.filter(t => t.completed).length,
+              consistencyScore: growthPlan.consistencyScore,
+            });
+          } else {
+            console.warn(`[Admin] No growth plan found for member: ${member.id}`);
+          }
+
+          // Map NFTs from profile
+          const mappedNFTs = (profile.nfts || []).map((apiNft) => {
+            let nftType: "okr" | "consistency" | "skill" | "milestone" = "okr";
+            const descLower = apiNft.description.toLowerCase();
+            if (descLower.includes("consistency")) {
+              nftType = "consistency";
+            } else if (descLower.includes("skill") || descLower.includes("master")) {
+              nftType = "skill";
+            } else if (descLower.includes("milestone")) {
+              nftType = "milestone";
+            }
+
+            return {
+              id: apiNft.tokenId || `nft-${apiNft.txHash.slice(0, 8)}`,
+              name: apiNft.description || "Achievement NFT",
+              description: apiNft.description || "Earned through completing goals",
+              type: nftType,
+              earnedAt: apiNft.mintedAt ? new Date(apiNft.mintedAt).toISOString() : new Date().toISOString(),
+              blockchainHash: apiNft.txHash || apiNft.tokenId || "",
+            };
+          });
+
+          // Update member with fresh data
+          setRefreshedMember({
+            ...member,
+            name: `${profile.user.firstName} ${profile.user.lastName}`.trim() || profile.user.email,
+            email: profile.user.email,
+            profile: {
+              role: profile.user.currentRole || "",
+              currentLevel: "Middle",
+              dailyTime: profile.user.hoursPerWeek ? profile.user.hoursPerWeek / 7 : 2,
+              targetGoal: profile.user.targetRole || "",
+              targetLevel: "Senior",
+            },
+            growthPlan,
+            nftCount: mappedNFTs.length,
+            nfts: mappedNFTs,
+          });
+        }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
+          // Try to load growth plan even if profile fetch fails
+          try {
+            const userProfile: UserProfile = {
+              role: member.profile.role || "",
+              currentLevel: member.profile.currentLevel || "Middle",
+              dailyTime: member.profile.dailyTime || 2,
+              targetGoal: member.profile.targetGoal || "",
+              targetLevel: member.profile.targetLevel || "Senior",
+            };
+            const growthPlan = await loadPlanFromAPI(member.id, userProfile);
+            if (growthPlan) {
+              setRefreshedMember({
+                ...member,
+                growthPlan,
+              });
+            } else {
+              setRefreshedMember(member);
+            }
+          } catch (planError) {
+            console.error("Failed to load growth plan:", planError);
+            // Fallback to original member data
+            setRefreshedMember(member);
+          }
+        } finally {
+          setIsLoadingProfile(false);
+        }
+      };
+
+    fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member.id]);
+
+  // Use refreshed member data if available, otherwise fall back to original member
+  const displayMember = refreshedMember || member;
+  const plan = displayMember.growthPlan;
   
+  if (isLoadingProfile) {
+    return (
+      <div className="p-6">
+        <Button variant="ghost" onClick={onBack} className="mb-6">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading member profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!plan) {
     return (
       <div className="p-6">
@@ -39,7 +212,9 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
 
   const completedTasks = plan.dailyTasks.filter(t => t.completed).length;
   const totalTasks = plan.dailyTasks.length;
-  const progressPercent = Math.round((completedTasks / totalTasks) * 100);
+  const progressPercent = totalTasks > 0 
+    ? Math.round((completedTasks / totalTasks) * 100) 
+    : 0;
 
   // Generate weekly progress data
   const weeklyData = plan.weeklyPlans.slice(0, 8).map((week, i) => ({
@@ -80,27 +255,27 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
           
           <div className="flex-1 min-w-0 w-full">
             <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
-              <h1 className="font-display text-xl md:text-2xl font-bold break-words">{member.name}</h1>
-              <Badge variant="secondary" className="text-xs">{member.department}</Badge>
+              <h1 className="font-display text-xl md:text-2xl font-bold break-words">{displayMember.name}</h1>
+              <Badge variant="secondary" className="text-xs">{displayMember.department}</Badge>
             </div>
-            <p className="text-sm md:text-base text-muted-foreground mb-3 md:mb-4 break-all">{member.email}</p>
+            <p className="text-sm md:text-base text-muted-foreground mb-3 md:mb-4 break-all">{displayMember.email}</p>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-0">
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Current Role</p>
-                <p className="font-medium text-sm md:text-base break-words">{member.profile.role}</p>
+                <p className="font-medium text-sm md:text-base break-words">{displayMember.profile.role}</p>
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Level</p>
-                <p className="font-medium text-sm md:text-base">{member.profile.currentLevel} → {member.profile.targetLevel}</p>
+                <p className="font-medium text-sm md:text-base">{displayMember.profile.currentLevel} → {displayMember.profile.targetLevel}</p>
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Daily Commitment</p>
-                <p className="font-medium text-sm md:text-base">{member.profile.dailyTime}h/day</p>
+                <p className="font-medium text-sm md:text-base">{typeof displayMember.profile.dailyTime === 'number' ? displayMember.profile.dailyTime.toFixed(2) : '0.00'}h/day</p>
               </div>
               <div>
                 <p className="text-xs md:text-sm text-muted-foreground">Joined</p>
-                <p className="font-medium text-sm md:text-base">{new Date(member.joinedAt).toLocaleDateString('en-US')}</p>
+                <p className="font-medium text-sm md:text-base">{new Date(displayMember.joinedAt).toLocaleDateString('en-US')}</p>
               </div>
             </div>
           </div>
@@ -116,7 +291,7 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
             >
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                <p className="text-2xl md:text-4xl font-display font-bold text-primary">{member.nftCount}</p>
+                <p className="text-2xl md:text-4xl font-display font-bold text-primary">{displayMember.nftCount}</p>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground">NFTs</p>
               <p className="text-xs text-primary mt-1 hover:underline">Click to view</p>
@@ -247,26 +422,36 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
               <h2 className="font-display text-lg md:text-xl font-bold">6-Month OKRs</h2>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {plan.okrs.map((okr, i) => (
-            <div key={i} className="bg-secondary/50 rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="outline">Month {okr.month}</Badge>
-                <span className="text-sm font-medium text-primary">{okr.progress}%</span>
-              </div>
-              <p className="font-medium">{okr.objective}</p>
-              <Progress value={okr.progress} className="h-2" />
-              <ul className="text-sm text-muted-foreground space-y-1">
-                {okr.keyResults.slice(0, 2).map((kr, j) => (
-                  <li key={j} className="flex items-start gap-2">
-                    <span className="w-1 h-1 rounded-full bg-muted-foreground mt-2" />
-                    {kr}
-                  </li>
+            {plan.okrs.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {plan.okrs.map((okr, i) => (
+                  <div key={i} className="bg-secondary/50 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">Month {okr.month}</Badge>
+                      <span className="text-sm font-medium text-primary">{okr.progress}%</span>
+                    </div>
+                    <p className="font-medium">{okr.objective}</p>
+                    <Progress value={okr.progress} className="h-2" />
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {okr.keyResults && okr.keyResults.length > 0 ? (
+                        okr.keyResults.slice(0, 2).map((kr, j) => (
+                          <li key={j} className="flex items-start gap-2">
+                            <span className="w-1 h-1 rounded-full bg-muted-foreground mt-2" />
+                            {kr}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-xs text-muted-foreground italic">No key results</li>
+                      )}
+                    </ul>
+                  </div>
                 ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No OKRs available for this member.</p>
+              </div>
+            )}
       </motion.div>
 
           {/* HR Summary */}
@@ -327,8 +512,8 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
       <NFTDetailsDialog
         open={nftDialogOpen}
         onOpenChange={setNftDialogOpen}
-        nfts={member.nfts}
-        memberName={member.name}
+        nfts={displayMember.nfts}
+        memberName={displayMember.name}
       />
     </div>
   );

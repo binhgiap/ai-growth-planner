@@ -195,7 +195,7 @@ export const DashboardOverview = ({ plan, onUpdateTask, userInfo }: DashboardOve
           {[
             { label: "Current Day", value: "1/180", icon: Calendar, color: "text-agent-daily" },
             { label: "Tasks Completed", value: `${completedTasks}/${totalTasks}`, icon: CheckCircle2, color: "text-primary" },
-            { label: "Hours/Day", value: `${plan.profile.dailyTime}h`, icon: Clock, color: "text-agent-skill" },
+            { label: "Hours/Day", value: `${typeof plan.profile.dailyTime === 'number' ? plan.profile.dailyTime.toFixed(2) : '0.00'}h`, icon: Clock, color: "text-agent-skill" },
             { label: "OKRs Completed", value: "0/6", icon: Target, color: "text-agent-goal" },
           ].map((stat, i) => (
             <motion.div

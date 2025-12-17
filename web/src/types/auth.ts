@@ -34,6 +34,7 @@ export interface RegisterData {
   password: string;
   firstName: string;
   lastName: string;
+  walletAddress: string;
   currentRole?: string;
   targetRole?: string;
 }
@@ -44,6 +45,7 @@ export interface RegisterFormData {
   password: string;
   name: string;
   confirmPassword: string;
+  walletAddress: string;
 }
 
 export interface AuthResponse {

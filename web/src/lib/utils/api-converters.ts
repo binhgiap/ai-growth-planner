@@ -153,8 +153,13 @@ export const loadPlanFromAPI = async (
       return null;
     }
 
-    const goals = goalsResponse.data.data || [];
-    const tasks = tasksResponse.data || [];
+    // Handle both possible response structures: data.data (nested) or data (direct array)
+    const goals = Array.isArray(goalsResponse.data) 
+      ? goalsResponse.data 
+      : (goalsResponse.data?.data || []);
+    const tasks = Array.isArray(tasksResponse.data) 
+      ? tasksResponse.data 
+      : (tasksResponse.data || []);
 
     // Convert to GrowthPlan format
     const now = new Date();

@@ -54,11 +54,13 @@ export const tasksApi = {
     const queryParams = new URLSearchParams({ userId });
     if (status) queryParams.append('status', status);
     
-    const response = await fetch(`${API_BASE_URL}/api/daily-tasks?${queryParams}`, {
+    // Use /user endpoint for admin portal
+    const url = `${API_BASE_URL}/api/daily-tasks/user?${queryParams}`;
+    const response = await fetch(url, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<ApiResponse<DailyTask[]>>(response);
+    return handleApiResponse<ApiResponse<DailyTask[]>>(response, 'GET', url);
   },
 
   // Get today's tasks
