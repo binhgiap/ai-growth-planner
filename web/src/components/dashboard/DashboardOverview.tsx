@@ -176,7 +176,7 @@ export const DashboardOverview = ({ plan, onUpdateTask, userInfo }: DashboardOve
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <div className="glass-card px-2 md:px-4 py-1.5 md:py-2 flex items-center gap-1 md:gap-2">
                 <Flame className="w-4 h-4 md:w-5 md:h-5 text-agent-progress" />
-                <span className="font-semibold text-sm md:text-base">{plan.consistencyScore}%</span>
+                <span className="font-semibold text-sm md:text-base">{typeof plan.consistencyScore === 'number' ? plan.consistencyScore.toFixed(2) : '0.00'}%</span>
                 <span className="text-xs md:text-sm text-muted-foreground hidden sm:inline">Consistency</span>
               </div>
               <UserProfileMenu />

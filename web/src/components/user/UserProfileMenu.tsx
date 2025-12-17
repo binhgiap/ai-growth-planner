@@ -38,27 +38,59 @@ export const UserProfileMenu = () => {
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
 
-  // Load user NFTs from growth plan (from API)
+  // Load user NFTs from API profile endpoint
   useEffect(() => {
     const loadNFTs = async () => {
       if (user?.id) {
         try {
-          // Create default profile to load plan
-          const defaultProfile: UserProfile = {
-            role: user.currentRole || "",
-            currentLevel: "",
-            dailyTime: 2,
-            targetGoal: user.targetRole || "",
-            targetLevel: "",
-          };
+          const { usersApi } = await import("@/lib/api");
+          const response = await usersApi.getProfile(user.id);
           
-          const plan = await loadPlanFromAPI(user.id, defaultProfile);
-          if (plan) {
-            const nfts = generateUserNFTs(plan);
-            setUserNFTs(nfts);
+          if (response?.success && response.data) {
+            const profileData = response.data as unknown as {
+              nfts: Array<{
+                tokenId: string | null;
+                contractAddress: string;
+                txHash: string;
+                description: string;
+                userInfo: string;
+                mintedAt: Date | null;
+              }>;
+            };
+            
+            // Convert API NFTs to display format
+            const apiNFTs = profileData.nfts || [];
+            const displayNFTs: NFT[] = apiNFTs.map((apiNft, index) => ({
+              id: apiNft.tokenId || `nft-${index}`,
+              name: apiNft.description || "Achievement NFT",
+              description: apiNft.description || "Earned through completing goals",
+              type: "okr" as const, // Default type, could be derived from description
+              earnedAt: apiNft.mintedAt ? new Date(apiNft.mintedAt).toISOString() : new Date().toISOString(),
+              blockchainHash: apiNft.txHash || apiNft.tokenId || "",
+            }));
+            
+            setUserNFTs(displayNFTs);
           }
         } catch (error) {
-          console.error("Error loading plan for NFTs:", error);
+          console.error("Error loading NFTs from API:", error);
+          // Fallback: try to generate from plan if API fails
+          try {
+            const defaultProfile: UserProfile = {
+              role: user.currentRole || "",
+              currentLevel: "",
+              dailyTime: 2,
+              targetGoal: user.targetRole || "",
+              targetLevel: "",
+            };
+            
+            const plan = await loadPlanFromAPI(user.id, defaultProfile);
+            if (plan) {
+              const nfts = generateUserNFTs(plan);
+              setUserNFTs(nfts);
+            }
+          } catch (fallbackError) {
+            console.error("Error loading plan for NFTs:", fallbackError);
+          }
         }
       }
     };

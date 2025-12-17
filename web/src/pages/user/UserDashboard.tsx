@@ -204,11 +204,27 @@ const UserDashboard = () => {
       ),
     };
     
-    // Recalculate consistency score
+    // Recalculate consistency score from real task completion data
+    // Consistency = actual completion percentage
+    // Default is 0 - only calculate if we have tasks
     const completedTasks = updatedPlan.dailyTasks.filter((t) => t.completed).length;
     const totalTasks = updatedPlan.dailyTasks.length;
-    const progressPercent = (completedTasks / totalTasks) * 100;
-    updatedPlan.consistencyScore = Math.max(60, 100 - (100 - progressPercent) * 0.4);
+    let consistencyScore = 0;
+    
+    if (totalTasks > 0) {
+      const progressPercent = (completedTasks / totalTasks) * 100;
+      // Consistency reflects actual completion: 0% completion = 0% consistency, 100% completion = 100% consistency
+      if (!isNaN(progressPercent) && isFinite(progressPercent)) {
+        consistencyScore = progressPercent;
+        consistencyScore = Math.max(0, Math.min(100, consistencyScore));
+      } else {
+        // Explicitly set to 0 if calculation is invalid
+        consistencyScore = 0;
+      }
+    }
+    // If totalTasks === 0, consistencyScore stays at 0 (default)
+    
+    updatedPlan.consistencyScore = parseFloat(consistencyScore.toFixed(2));
     
     setGrowthPlan(updatedPlan);
     

@@ -13,7 +13,7 @@ import {
   generateDepartmentSummaries 
 } from "@/data/mock-team";
 import { usersApi, goalsApi, tasksApi } from "@/lib/api";
-import { TeamMember } from "@/types/admin";
+import { TeamMember, NFT } from "@/types/admin";
 
 const AdminPortal = () => {
   const navigate = useNavigate();
@@ -42,8 +42,32 @@ const AdminPortal = () => {
         const apiMembers: TeamMember[] = await Promise.all(
           response.data.map(async (apiUser) => {
             // For each user, try to load their goals and tasks to calculate stats
-            let nftCount = 0;
             let growthPlan = null;
+            
+            // Map API NFTs to admin portal NFT format
+            const mappedNFTs: NFT[] = (apiUser.nfts || []).map((apiNft) => {
+              // Determine NFT type from description
+              let nftType: "okr" | "consistency" | "skill" | "milestone" = "okr";
+              const descLower = apiNft.description.toLowerCase();
+              if (descLower.includes("consistency")) {
+                nftType = "consistency";
+              } else if (descLower.includes("skill") || descLower.includes("master")) {
+                nftType = "skill";
+              } else if (descLower.includes("milestone")) {
+                nftType = "milestone";
+              }
+              
+              return {
+                id: apiNft.tokenId || `nft-${apiNft.txHash.slice(0, 8)}`,
+                name: apiNft.description || "Achievement NFT",
+                description: apiNft.description || "Earned through completing goals",
+                type: nftType,
+                earnedAt: apiNft.mintedAt ? new Date(apiNft.mintedAt).toISOString() : new Date().toISOString(),
+                blockchainHash: apiNft.txHash || apiNft.tokenId || "",
+              };
+            });
+            
+            const nftCount = mappedNFTs.length;
             
             try {
               const [goalsRes, tasksRes] = await Promise.all([
@@ -55,8 +79,8 @@ const AdminPortal = () => {
               const tasks = tasksRes?.success ? tasksRes.data || [] : [];
               const completedTasks = tasks.filter(t => t.completed || t.status === "COMPLETED").length;
               
-              // Calculate NFT count based on achievements (mocked for now)
-              nftCount = Math.floor(goals.length * 0.5) + Math.floor(completedTasks / 10);
+              // Growth plan would be loaded here if needed
+              // For now, we'll keep it null and focus on NFTs
             } catch (error) {
               console.warn(`Failed to load data for user ${apiUser.id}:`, error);
               // Don't throw - continue with default values
@@ -64,7 +88,7 @@ const AdminPortal = () => {
             
             return {
               id: apiUser.id,
-              name: `${apiUser.firstName} ${apiUser.lastName}`,
+              name: `${apiUser.firstName} ${apiUser.lastName}`.trim() || apiUser.email,
               email: apiUser.email,
               department: "Engineering", // Default, can be added to user model
               profile: {
@@ -78,7 +102,7 @@ const AdminPortal = () => {
               joinedAt: apiUser.createdAt,
               lastActive: apiUser.updatedAt,
               nftCount,
-              nfts: [], // NFTs would be loaded separately
+              nfts: mappedNFTs, // Use NFTs from API
             };
           })
         );

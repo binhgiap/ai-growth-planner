@@ -64,7 +64,7 @@ export const ProgressChart = ({ plan, onBack }: ProgressChartProps) => {
           {[
             { 
               label: "Consistency Score", 
-              value: `${plan.consistencyScore}%`, 
+              value: `${typeof plan.consistencyScore === 'number' ? plan.consistencyScore.toFixed(2) : '0.00'}%`, 
               icon: Flame, 
               color: "text-agent-progress",
               bg: "bg-agent-progress/10"
