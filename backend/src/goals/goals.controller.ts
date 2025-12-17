@@ -22,9 +22,11 @@ import {
 } from '@nestjs/swagger';
 import { GoalService } from './goals.service';
 import { CreateGoalDto, UpdateGoalDto } from './dto/create-goal.dto';
-import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { JwtAuthGuard, RolesGuard } from '@auth/guards/auth.guard';
 import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
+import { UserRole } from '@/users/entities/user.entity';
+import { Roles } from '@/auth/decorators/roles.decorator';
 
 /**
  * GoalController handles HTTP requests for goal management
@@ -110,6 +112,47 @@ export class GoalController {
     @Query('status') status?: string,
   ) {
     const goals = await this.goalService.findByUserId(user.id, status);
+    return {
+      success: true,
+      data: goals,
+      count: goals.length,
+    };
+  }
+
+  /**
+   * GET /goals - Get all goals for a user admin
+   */
+  @Get('/user')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all goals for a user admin' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: 'string',
+    description: 'Filter by status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Goals retrieved successfully',
+    schema: {
+      example: {
+        success: true,
+        data: [],
+        count: 0,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async findByUserAdmin(
+    @Query('status') status?: string,
+    @Query('userId') userId?: string,
+  ) {
+    const goals = await this.goalService.findByUserId(userId!, status);
     return {
       success: true,
       data: goals,
