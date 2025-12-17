@@ -63,16 +63,36 @@ const UserDashboard = () => {
         return;
       }
 
-      // Fetch user profile info for header display
+      // Fetch user profile info for header display from /api/users/profile/:id
       try {
         const profileResponse = await usersApi.getProfile(userId);
-        if (profileResponse?.data) {
-          setUserInfo({
-            currentRole: profileResponse.data.currentRole || "",
-            targetRole: profileResponse.data.targetRole || "",
-            currentLevel: "", // Can be added if available in API
-            targetLevel: "", // Can be added if available in API
-          });
+        if (profileResponse?.success && profileResponse.data) {
+          // Profile API returns { user: {...}, goals: [...], tasksCount: ..., progressLogs: [...], nfts: [...] }
+          // Cast through unknown to handle type mismatch (API returns UserProfileData but typed as User)
+          const profileData = profileResponse.data as unknown as {
+            user: {
+              id: string;
+              email: string;
+              firstName: string;
+              lastName: string;
+              currentRole: string;
+              targetRole: string;
+              hoursPerWeek?: number;
+            };
+            goals?: unknown[];
+            tasksCount?: number;
+            progressLogs?: unknown[];
+            nfts?: unknown[];
+          };
+          
+          if (profileData.user) {
+            setUserInfo({
+              currentRole: profileData.user.currentRole || "",
+              targetRole: profileData.user.targetRole || "",
+              currentLevel: "", // Levels not available in User entity yet
+              targetLevel: "", // Levels not available in User entity yet
+            });
+          }
         }
       } catch (error) {
         console.warn("Failed to fetch user profile:", error);
@@ -116,7 +136,6 @@ const UserDashboard = () => {
     };
 
     loadPlan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGetStarted = () => {
