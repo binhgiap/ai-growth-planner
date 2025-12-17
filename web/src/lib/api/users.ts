@@ -23,6 +23,15 @@ export interface UpdateUserDto {
   bio?: string;
 }
 
+export interface UserNFT {
+  tokenId: string;
+  contractAddress: string;
+  txHash: string;
+  description: string;
+  userInfo: string;
+  mintedAt: string | null;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -36,6 +45,7 @@ export interface User {
   bio?: string;
   createdAt: string;
   updatedAt: string;
+  nfts?: UserNFT[];
 }
 
 export const usersApi = {

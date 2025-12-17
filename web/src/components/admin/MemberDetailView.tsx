@@ -107,7 +107,7 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
 
           <div className="flex gap-3 md:gap-4 w-full sm:w-auto sm:flex-col">
             <div className="text-center glass-card px-4 md:px-6 py-3 md:py-4 flex-1 sm:flex-initial">
-              <p className="text-2xl md:text-4xl font-display font-bold text-primary">{plan.consistencyScore}%</p>
+              <p className="text-2xl md:text-4xl font-display font-bold text-primary">{typeof plan.consistencyScore === 'number' ? plan.consistencyScore.toFixed(2) : '0.00'}%</p>
               <p className="text-xs md:text-sm text-muted-foreground">Consistency Score</p>
             </div>
             <div 

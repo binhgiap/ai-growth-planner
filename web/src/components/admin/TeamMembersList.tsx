@@ -139,7 +139,7 @@ export const TeamMembersList = ({ members, onViewMember }: TeamMembersListProps)
                   <div className="flex items-center gap-4 mt-2 md:hidden">
                     <div className="text-center">
                       <p className={`text-base font-bold ${getConsistencyColor(member.growthPlan?.consistencyScore || 0)}`}>
-                        {member.growthPlan?.consistencyScore || 0}%
+                        {typeof member.growthPlan?.consistencyScore === 'number' ? member.growthPlan.consistencyScore.toFixed(2) : '0.00'}%
                       </p>
                       <p className="text-xs text-muted-foreground">Consistency</p>
                     </div>
@@ -156,7 +156,7 @@ export const TeamMembersList = ({ members, onViewMember }: TeamMembersListProps)
                 <div className="hidden md:flex items-center gap-6 shrink-0">
                   <div className="text-center">
                     <p className={`text-xl font-bold ${getConsistencyColor(member.growthPlan?.consistencyScore || 0)}`}>
-                      {member.growthPlan?.consistencyScore || 0}%
+                      {typeof member.growthPlan?.consistencyScore === 'number' ? member.growthPlan.consistencyScore.toFixed(2) : '0.00'}%
                     </p>
                     <p className="text-xs text-muted-foreground">Consistency</p>
                   </div>

@@ -31,7 +31,7 @@ export const AdminDashboard = ({ stats, departments, onViewMember }: AdminDashbo
         {[
           { label: "Total Members", value: stats.totalMembers, icon: Users, color: "text-agent-skill" },
           { label: "Active This Week", value: stats.activeMembers, icon: Clock, color: "text-agent-daily" },
-          { label: "Avg Consistency", value: `${stats.averageConsistency}%`, icon: TrendingUp, color: "text-agent-progress" },
+          { label: "Avg Consistency", value: `${typeof stats.averageConsistency === 'number' ? stats.averageConsistency.toFixed(2) : '0.00'}%`, icon: TrendingUp, color: "text-agent-progress" },
           { label: "Goals Completed", value: `${stats.completedGoals}/${stats.totalGoals}`, icon: Target, color: "text-agent-goal" },
         ].map((stat, i) => (
           <motion.div
@@ -88,7 +88,7 @@ export const AdminDashboard = ({ stats, departments, onViewMember }: AdminDashbo
                   <p className="text-xs text-muted-foreground truncate">{member.profile.role}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="font-bold text-primary text-sm md:text-base">{member.growthPlan?.consistencyScore}%</p>
+                  <p className="font-bold text-primary text-sm md:text-base">{typeof member.growthPlan?.consistencyScore === 'number' ? member.growthPlan.consistencyScore.toFixed(2) : '0.00'}%</p>
                   <p className="text-xs text-muted-foreground hidden sm:inline">Consistency</p>
                 </div>
               </div>
@@ -125,7 +125,7 @@ export const AdminDashboard = ({ stats, departments, onViewMember }: AdminDashbo
                   <p className="text-xs text-muted-foreground truncate">{member.profile.role}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="font-bold text-orange-500 text-sm md:text-base">{member.growthPlan?.consistencyScore}%</p>
+                  <p className="font-bold text-orange-500 text-sm md:text-base">{typeof member.growthPlan?.consistencyScore === 'number' ? member.growthPlan.consistencyScore.toFixed(2) : '0.00'}%</p>
                   <p className="text-xs text-muted-foreground hidden sm:inline">Consistency</p>
                 </div>
               </div>

@@ -133,7 +133,7 @@ export const NFTDetailsDialog = ({ open, onOpenChange, nfts, memberName }: NFTDe
                     onClick={() => {
                       // In a real app, this would open the blockchain explorer
                       window.open(
-                        `https://etherscan.io/tx/${nft.blockchainHash}`,
+                        `https://hashscan.io/testnet/transaction/${nft.blockchainHash}`,
                         "_blank"
                       );
                     }}

@@ -195,11 +195,35 @@ export const loadPlanFromAPI = async (
       });
     }
 
-    // Calculate consistency score
-    const completedTasks = dailyTasks.filter((t) => t.completed).length;
-    const totalTasks = dailyTasks.length;
-    const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
-    const consistencyScore = Math.max(60, 100 - (100 - progressPercent) * 0.4);
+    // Calculate consistency score from real API data
+    // Consistency reflects CURRENT task completion status (not historical progress logs)
+    // Always use daily tasks for consistency since they represent the current state
+    // Default is 0 - only calculate if we have tasks
+    let consistencyScore = 0;
+    
+    // Calculate from daily tasks (current state)
+    if (dailyTasks.length > 0) {
+      const completedTasks = dailyTasks.filter((t) => t.completed).length;
+      const totalTasks = dailyTasks.length;
+      
+      if (totalTasks > 0) {
+        const progressPercent = (completedTasks / totalTasks) * 100;
+        
+        // Consistency score = actual completion percentage
+        if (!isNaN(progressPercent) && isFinite(progressPercent)) {
+          consistencyScore = progressPercent;
+          // Ensure it's between 0 and 100
+          consistencyScore = Math.max(0, Math.min(100, consistencyScore));
+        } else {
+          // Explicitly set to 0 if calculation is invalid
+          consistencyScore = 0;
+        }
+      }
+    }
+    // If no tasks, consistencyScore stays at 0 (default)
+    
+    // Format to 2 decimal places
+    consistencyScore = parseFloat(consistencyScore.toFixed(2));
 
     return {
       id: `plan-${userId}`,
