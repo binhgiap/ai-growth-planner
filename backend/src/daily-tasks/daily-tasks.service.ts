@@ -7,6 +7,10 @@ import {
   UpdateDailyTaskDto,
   DailyTaskResponseDto,
 } from './dto/create-daily-task.dto';
+import {
+  notDeleted,
+  buildNotDeletedWhere,
+} from '@common/helpers/soft-delete.helper';
 
 /**
  * DailyTaskService handles daily task management
@@ -48,11 +52,10 @@ export class DailyTaskService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         user_id: userId,
         dueDate: Between(today, tomorrow),
-        deletedAt: IsNull(),
-      },
+      }),
       order: { priority: 'ASC', createdAt: 'DESC' },
     });
 
@@ -68,11 +71,10 @@ export class DailyTaskService {
     endDate: Date,
   ): Promise<DailyTaskResponseDto[]> {
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         user_id: userId,
         dueDate: Between(startDate, endDate),
-        deletedAt: IsNull(),
-      },
+      }),
       order: { dueDate: 'ASC', priority: 'ASC' },
     });
 
@@ -109,11 +111,10 @@ export class DailyTaskService {
     userId: string,
   ): Promise<DailyTaskResponseDto[]> {
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         goal_id: goalId,
         user_id: userId,
-        deletedAt: IsNull(),
-      },
+      }),
       order: { dueDate: 'ASC' },
     });
 
