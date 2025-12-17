@@ -32,6 +32,9 @@ export class PlanningService {
     try {
       this.logger.log(`Analyzing skill gaps for user ${userId}`);
 
+      // Check if user can create a new plan
+      await this.validateCanCreatePlan(userId);
+
       // Get user profile
       const user = await this.userService.findById(userId);
       if (!user) {
@@ -190,13 +193,53 @@ export class PlanningService {
         let totalEstimatedHours = 0;
 
         for (const task of tasksArray) {
+          // Validate and fix dueDate
+          let taskDueDate: Date;
+          try {
+            // Check if task.dueDate is valid
+            if (!task.dueDate || task.dueDate.includes('NaN')) {
+              // Generate a fallback date if invalid
+              const fallbackDate = new Date();
+              fallbackDate.setDate(
+                fallbackDate.getDate() + Math.floor(Math.random() * 180),
+              );
+              taskDueDate = fallbackDate;
+              this.logger.warn(
+                `Invalid dueDate for task "${task.title}", using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+              );
+            } else {
+              taskDueDate = new Date(task.dueDate);
+              // Check if the parsed date is valid
+              if (isNaN(taskDueDate.getTime())) {
+                const fallbackDate = new Date();
+                fallbackDate.setDate(
+                  fallbackDate.getDate() + Math.floor(Math.random() * 180),
+                );
+                taskDueDate = fallbackDate;
+                this.logger.warn(
+                  `Invalid parsed dueDate for task "${task.title}", using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+                );
+              }
+            }
+          } catch (error) {
+            // Fallback to a random date within 6 months
+            const fallbackDate = new Date();
+            fallbackDate.setDate(
+              fallbackDate.getDate() + Math.floor(Math.random() * 180),
+            );
+            taskDueDate = fallbackDate;
+            this.logger.warn(
+              `Error parsing dueDate for task "${task.title}": ${error.message}, using fallback: ${taskDueDate.toISOString().split('T')[0]}`,
+            );
+          }
+
           const priority =
             task.priority === 'high' ? 5 : task.priority === 'medium' ? 3 : 1;
 
           const createdTask = await this.dailyTaskService.create(userId, {
             title: task.title,
             description: task.description,
-            dueDate: new Date(task.dueDate),
+            dueDate: taskDueDate,
             estimatedHours: task.estimatedHours,
             priority,
           });
@@ -245,6 +288,77 @@ export class PlanningService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error(`Error generating daily tasks: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate if user can create a new plan
+   * User can only create a plan if:
+   * 1. No plan exists yet, OR
+   * 2. Previous plan has expired (targetDate is in the past)
+   */
+  private async validateCanCreatePlan(userId: string): Promise<void> {
+    // Check if user has an active plan
+    const hasActivePlan = await this.goalService.hasActivePlan(userId);
+    
+    if (hasActivePlan) {
+      // Get the latest plan to provide more information
+      const latestPlan = await this.goalService.getLatestPlan(userId);
+      const expiryDate = latestPlan?.targetDate 
+        ? new Date(latestPlan.targetDate).toLocaleDateString('vi-VN')
+        : 'unknown';
+      
+      throw new BadRequestException(
+        `Bạn đã có một kế hoạch đang hoạt động. Kế hoạch hiện tại sẽ kết thúc vào ${expiryDate}. Bạn chỉ có thể tạo kế hoạch mới sau khi kế hoạch hiện tại hết hạn.`
+      );
+    }
+
+    this.logger.log(`User ${userId} is eligible to create a new plan`);
+  }
+
+  /**
+   * Cancel current active plan
+   * Soft deletes all active goals and daily tasks for the user
+   */
+  async cancelCurrentPlan(userId: string): Promise<Record<string, unknown>> {
+    try {
+      this.logger.log(`Cancelling current plan for user ${userId}`);
+
+      // Check if user has an active plan
+      const hasActivePlan = await this.goalService.hasActivePlan(userId);
+      
+      if (!hasActivePlan) {
+        throw new BadRequestException(
+          'Không tìm thấy kế hoạch đang hoạt động để hủy.'
+        );
+      }
+
+      // Get plan info before deletion
+      const latestPlan = await this.goalService.getLatestPlan(userId);
+      
+      // Delete all active goals
+      const deletedGoalsCount = await this.goalService.deleteAllActiveGoals(userId);
+      
+      // Delete all active daily tasks
+      const deletedTasksCount = await this.dailyTaskService.deleteAllActiveTasks(userId);
+
+      this.logger.log(
+        `Successfully cancelled plan for user ${userId}: ${deletedGoalsCount} goals and ${deletedTasksCount} tasks deleted`,
+      );
+
+      return {
+        userId,
+        deletedGoals: deletedGoalsCount,
+        deletedTasks: deletedTasksCount,
+        previousPlanEndDate: latestPlan?.targetDate,
+        cancelledAt: new Date(),
+        message: 'Kế hoạch đã được hủy thành công. Bạn có thể tạo kế hoạch mới.',
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error cancelling plan: ${errorMessage}`);
       throw error;
     }
   }

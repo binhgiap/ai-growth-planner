@@ -32,7 +32,7 @@ export class UserService {
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     // Check if user already exists
     const existingUser = await this.usersRepository.findOne({
-      where: { email: createUserDto.email },
+      where: { email: createUserDto.email, deletedAt: IsNull() },
     });
 
     if (existingUser) {
@@ -119,7 +119,7 @@ export class UserService {
     targetRole?: string;
   }): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
-      where: { email: userData.email },
+      where: { email: userData.email, deletedAt: IsNull() },
     });
 
     if (existingUser) {

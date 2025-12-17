@@ -21,52 +21,54 @@ interface DailyTasksOutput {
 @Injectable()
 export class DailyTaskAgent {
   private systemPrompt = `
-You are an experienced project manager and learning specialist with expertise in:
-- Breaking down complex goals into micro-tasks
-- Creating realistic timelines and schedules
-- Prioritizing work based on impact and dependencies
-- Designing learning paths and skill development
-- Balancing theory and practice in technical development
+You are an expert project manager and learning architect who MUST generate EXACTLY 180 tasks.
 
-Your task is to generate detailed, actionable tasks for a 6-month personal development plan.
+CRITICAL SUCCESS CRITERIA:
+- MUST return exactly 180 tasks in the tasks array
+- Count your tasks as you generate them
+- Verify the final count is exactly 180 before returning
+- If you have fewer than 180, add more tasks until you reach exactly 180
+- If you have more than 180, remove tasks until you have exactly 180
 
-GUIDELINES FOR TASK GENERATION:
-1. Each task must be SMART: Specific, Measurable, Achievable, Relevant, Time-bound
-2. Tasks should vary in type: reading, practice, projects, presentations, reviews
-3. Include learning resources with each task
-4. Respect task dependencies (prerequisites before advanced tasks)
-5. Ensure realistic time estimates (0.5-4 hours per task)
-6. Balance theory and practice throughout the timeline
-7. Include regular review and retrospective tasks
-8. Generate EXACTLY the requested number of tasks (typically 180)
+TASK GENERATION FRAMEWORK:
+You MUST create a comprehensive 6-month development plan with precisely 180 actionable tasks distributed across 26 weeks.
 
-TASK TYPES TO INCLUDE:
-- Learning tasks (courses, reading, tutorials)
-- Practice tasks (coding, design, exercises)
-- Project tasks (building, implementing, experimenting)
-- Collaboration tasks (code review, mentoring, discussion)
-- Reflection tasks (weekly review, journaling, retrospectives)
-- Assessment tasks (testing knowledge, mock interviews, presentations)
+MANDATORY TASK DISTRIBUTION (TOTAL = 180):
+Week 1-2 (Foundation Phase): 14 tasks
+Week 3-6 (Core Skills Phase): 28 tasks  
+Week 7-13 (Intermediate Phase): 49 tasks
+Week 14-20 (Advanced Phase): 49 tasks
+Week 21-26 (Mastery Phase): 40 tasks
 
-TIME DISTRIBUTION:
-- 20% learning/understanding
-- 40% practice/hands-on work
-- 25% application/projects
-- 10% review/reflection
-- 5% collaboration/mentoring
+TASK CATEGORIES WITH REQUIRED COUNTS:
+1. Learning Tasks (36 tasks - 20%): Courses, tutorials, reading, research
+2. Practice Tasks (72 tasks - 40%): Hands-on coding, exercises, drills
+3. Project Tasks (45 tasks - 25%): Building applications, implementations
+4. Review Tasks (18 tasks - 10%): Weekly reviews, retrospectives, assessments  
+5. Collaboration Tasks (9 tasks - 5%): Code reviews, mentoring, discussions
 
-QUALITY STANDARDS:
-- No duplicate or similar tasks
-- Clear dependencies indicated
-- Realistic and motivating progression
-- Mixed difficulty levels throughout
-- Include breaks and flexibility weeks
+TASK QUALITY REQUIREMENTS:
+- Each task = 0.5-4 hours maximum
+- Specific, actionable titles (no generic names)
+- Clear 2-3 sentence descriptions
+- Realistic due dates spread across 6 months
+- Proper priority distribution: 40% HIGH, 35% MEDIUM, 25% LOW
+- Include relevant learning resources
+- Logical progression and dependencies
+
+VERIFICATION CHECKLIST:
+Before returning JSON:
+1. Count total tasks = exactly 180
+2. Verify week distribution matches requirements
+3. Check category distribution percentages
+4. Ensure no duplicate or overly similar tasks
+5. Confirm proper date progression
   `;
 
   constructor(private openaiProvider: OpenAIProvider) {}
 
   /**
-   * Generate daily tasks from OKRs
+   * Generate daily tasks from OKRs with validation
    * Creates exactly 180 daily/weekly tasks spread across 6 months (26 weeks)
    */
   async generateDailyTasks(
@@ -76,74 +78,331 @@ QUALITY STANDARDS:
       timeline: string;
     }[],
   ): Promise<DailyTasksOutput> {
-    const userMessage = `
-You are a project management expert. Your task is to generate EXACTLY 180 actionable tasks for a 6-month development plan.
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 6);
 
-OBJECTIVES AND KEY RESULTS:
+    const userMessage = `
+🎯 CRITICAL MISSION: Generate EXACTLY 180 tasks for a 6-month development plan.
+
+📋 OBJECTIVES AND KEY RESULTS:
 ${okrs
   .map(
     (okr, idx) => `
 ${idx + 1}. OBJECTIVE: ${okr.objective}
-   KEY RESULTS: ${okr.keyResults.join('\n   - ')}`,
+   KEY RESULTS: 
+${okr.keyResults.map((kr) => `   ✓ ${kr}`).join('\n')}`,
   )
   .join('\n')}
 
-REQUIREMENTS:
-1. Generate EXACTLY 180 tasks (not fewer)
-2. Distribute tasks across 26 weeks (roughly 7 tasks per week)
-3. Start date: Today
-4. End date: 6 months from today
-5. Each task must have:
-   - Unique, specific title (avoid generic names)
-   - Detailed description (2-3 sentences)
-   - Due date (YYYY-MM-DD format)
-   - Estimated hours (0.5 to 4 hours per task)
-   - Priority: high/medium/low
-   - Linked goal/objective
-   - Learning resources (courses, books, tools, etc.)
+⚠️  MANDATORY REQUIREMENTS - NO EXCEPTIONS:
+1. EXACTLY 180 tasks in the "tasks" array (count them!)
+2. Start Date: ${startDate.toISOString().split('T')[0]}
+3. End Date: ${endDate.toISOString().split('T')[0]}
+4. Distribution across 26 weeks EXACTLY as specified:
+   
+   📚 FOUNDATION PHASE (Weeks 1-2): 14 tasks
+   - Environment setup, basic learning, tool familiarization
+   
+   💪 CORE SKILLS PHASE (Weeks 3-6): 28 tasks  
+   - Fundamental practice, essential concepts, foundation building
+   
+   ⚡ INTERMEDIATE PHASE (Weeks 7-13): 49 tasks
+   - Real-world applications, complex problems, skill integration
+   
+   🚀 ADVANCED PHASE (Weeks 14-20): 49 tasks
+   - System design, optimization, advanced implementations
+   
+   🏆 MASTERY PHASE (Weeks 21-26): 40 tasks
+   - Leadership, mentoring, final projects, retrospectives
 
-TASK DISTRIBUTION STRATEGY:
-- Week 1-2 (14 tasks): Foundation & Setup - learning resources, environment setup, basic concepts
-- Week 3-6 (28 tasks): Core Skills - fundamental skills, hands-on practice, small projects
-- Week 7-13 (49 tasks): Intermediate Application - complex problems, real-world scenarios, collaborative work
-- Week 14-20 (49 tasks): Advanced Implementation - system design, optimization, leadership tasks
-- Week 21-26 (40 tasks): Mastery & Review - mentoring, documentation, final projects, retrospectives
+📊 TASK CATEGORY DISTRIBUTION (VERIFY COUNTS):
+- Learning Tasks: 36 tasks (20%) - courses, reading, tutorials
+- Practice Tasks: 72 tasks (40%) - coding, exercises, hands-on work  
+- Project Tasks: 45 tasks (25%) - building, implementing, creating
+- Review Tasks: 18 tasks (10%) - retrospectives, assessments, evaluations
+- Collaboration Tasks: 9 tasks (5%) - mentoring, code reviews, discussions
 
-PRIORITY GUIDELINES:
-- HIGH (40%): Critical path tasks, blockers, core skill requirements
-- MEDIUM (35%): Important supporting tasks, reinforcement, related skills
-- LOW (25%): Nice-to-have, optional deep dives, exploration tasks
+🏷️ PRIORITY DISTRIBUTION:
+- HIGH: 72 tasks (40%) - Critical path, must-have skills
+- MEDIUM: 63 tasks (35%) - Important supporting skills
+- LOW: 45 tasks (25%) - Nice-to-have, exploration
 
-SPECIFIC INSTRUCTIONS:
-- Tasks must be realistic and achievable
-- Include variety: reading, coding, design, presentation, mentoring, projects
-- Break down large goals into micro-tasks
-- Ensure dependencies make sense (prerequisites before advanced tasks)
-- Add weekly review/retrospective tasks
-- Include time for breaks and flexibility
+✅ VERIFICATION CHECKLIST (Check before returning):
+□ Total task count = 180 exactly
+□ Week distribution matches: 14+28+49+49+40 = 180
+□ Category distribution matches percentages
+□ All dates between start and end date
+□ All tasks have required fields
+□ No duplicate or similar tasks
 
-Return valid JSON with this exact structure:
+📝 TASK FORMAT REQUIREMENTS:
+Each task MUST include:
+- title: Specific, unique, actionable (no generic names)
+- description: 2-3 clear sentences explaining what to do
+- dueDate: YYYY-MM-DD format ONLY (e.g., "2024-12-16") - NO timestamps, NO NaN values
+- estimatedHours: Number between 0.5 and 4 (e.g., 1.5, 2, 3.5)
+- priority: Exactly "high", "medium", or "low" (no other values)
+- linkedGoal: Which objective this supports (use exact objective text)
+- resources: Array of 1-3 learning resources (e.g., ["Course name", "Documentation"])
+
+🚨 CRITICAL DATE FORMAT:
+- Use ONLY valid dates in YYYY-MM-DD format
+- Start from ${startDate.toISOString().split('T')[0]} 
+- End by ${endDate.toISOString().split('T')[0]}
+- Distribute dates evenly across the 180-day period
+- NO invalid dates, NO NaN values, NO timestamps
+
+📅 DATE DISTRIBUTION EXAMPLE:
+Week 1: 2024-12-16, 2024-12-17, 2024-12-18, etc.
+Week 2: 2024-12-23, 2024-12-24, 2024-12-25, etc.
+Continue this pattern for 26 weeks...
+
+🎯 RETURN EXACT JSON FORMAT:
 {
   "tasks": [
     {
-      "title": "Task title",
-      "description": "Detailed description of what to do",
-      "dueDate": "YYYY-MM-DD",
+      "title": "Set up Node.js development environment",
+      "description": "Install Node.js, npm, and configure your local development environment for backend development.",
+      "dueDate": "2024-12-16",
       "estimatedHours": 2,
-      "priority": "high|medium|low",
-      "linkedGoal": "Objective name",
-      "resources": ["Resource 1", "Resource 2"]
+      "priority": "high", 
+      "linkedGoal": "Master Backend Development Fundamentals",
+      "resources": ["Node.js Official Documentation", "Development Setup Guide"]
     }
+    // ... exactly 179 more tasks
   ],
-  "schedule": "Summary of how tasks are distributed across the 26 weeks",
-  "summary": "Overall task plan summary"
+  "schedule": "Detailed breakdown of how the 180 tasks are distributed across 26 weeks",
+  "summary": "Overall task plan summary with key milestones and learning outcomes"
+}
+
+⚡ FINAL INSTRUCTION: COUNT YOUR TASKS! Verify you have exactly 180 before returning the JSON.
+    `;
+
+    try {
+      const result = await this.openaiProvider.generateJSON<DailyTasksOutput>(
+        this.systemPrompt,
+        userMessage,
+      );
+
+      // Validate the result and fix invalid dates
+      if (!result.tasks || !Array.isArray(result.tasks)) {
+        throw new Error('Invalid response: tasks array is missing');
+      }
+
+      // Fix any invalid dates in tasks
+      result.tasks = result.tasks.map((task, index) => {
+        let validDueDate: string;
+
+        try {
+          // Check if dueDate is valid
+          if (
+            !task.dueDate ||
+            task.dueDate.includes('NaN') ||
+            task.dueDate.includes('undefined')
+          ) {
+            // Generate a proper date based on task index
+            const baseDate = new Date();
+            const dayOffset = Math.floor(index / 7) * 7 + (index % 7); // Distribute across weeks
+            baseDate.setDate(baseDate.getDate() + dayOffset);
+            validDueDate = baseDate.toISOString().split('T')[0];
+          } else {
+            // Test if the date is parseable
+            const testDate = new Date(task.dueDate);
+            if (isNaN(testDate.getTime())) {
+              // Generate fallback date
+              const baseDate = new Date();
+              const dayOffset = Math.floor(index / 7) * 7 + (index % 7);
+              baseDate.setDate(baseDate.getDate() + dayOffset);
+              validDueDate = baseDate.toISOString().split('T')[0];
+            } else {
+              validDueDate = task.dueDate;
+            }
+          }
+        } catch (error) {
+          // Fallback date generation
+          const baseDate = new Date();
+          const dayOffset = Math.floor(index / 7) * 7 + (index % 7);
+          baseDate.setDate(baseDate.getDate() + dayOffset);
+          validDueDate = baseDate.toISOString().split('T')[0];
+        }
+
+        return {
+          ...task,
+          dueDate: validDueDate,
+          // Also ensure other fields are valid
+          estimatedHours:
+            typeof task.estimatedHours === 'number' &&
+            !isNaN(task.estimatedHours)
+              ? Math.max(0.5, Math.min(4, task.estimatedHours))
+              : 2,
+          priority: ['high', 'medium', 'low'].includes(task.priority)
+            ? task.priority
+            : 'medium',
+          title: task.title || `Task ${index + 1}`,
+          description: task.description || `Development task ${index + 1}`,
+          linkedGoal:
+            task.linkedGoal || okrs[0]?.objective || 'General Development',
+          resources: Array.isArray(task.resources)
+            ? task.resources
+            : ['Documentation', 'Online tutorials'],
+        };
+      });
+
+      if (result.tasks.length !== 180) {
+        console.warn(`Expected 180 tasks, got ${result.tasks.length}`);
+
+        // If we have fewer tasks, try to generate more
+        if (result.tasks.length < 180) {
+          const additionalTasksNeeded = 180 - result.tasks.length;
+          const additionalTasks = await this.generateAdditionalTasks(
+            okrs,
+            additionalTasksNeeded,
+            result.tasks,
+          );
+          result.tasks = [...result.tasks, ...additionalTasks];
+        }
+
+        // If we have too many, trim to exactly 180
+        if (result.tasks.length > 180) {
+          result.tasks = result.tasks.slice(0, 180);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error generating daily tasks:', error);
+      throw new Error(`Failed to generate daily tasks: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate additional tasks if the initial generation is incomplete
+   */
+  private async generateAdditionalTasks(
+    okrs: { objective: string; keyResults: string[]; timeline: string }[],
+    count: number,
+    existingTasks: any[],
+  ): Promise<any[]> {
+    const lastTask = existingTasks[existingTasks.length - 1];
+    const lastDate = new Date(lastTask?.dueDate || new Date());
+
+    const userMessage = `
+Generate exactly ${count} additional tasks to complete the 180-task plan.
+
+Existing tasks: ${existingTasks.length}
+Need: ${count} more tasks
+
+Continue from where the previous tasks left off.
+Last task date: ${lastDate.toISOString().split('T')[0]}
+
+Objectives:
+${okrs.map((okr) => `- ${okr.objective}`).join('\n')}
+
+IMPORTANT: Use proper date format YYYY-MM-DD only (e.g., "2024-12-16")
+NO timestamps, NO NaN values, NO invalid dates.
+
+Return JSON format:
+{
+  "tasks": [
+    // Exactly ${count} task objects with proper date format
+  ]
 }
     `;
 
-    return this.openaiProvider.generateJSON<DailyTasksOutput>(
-      this.systemPrompt,
-      userMessage,
-    );
+    try {
+      const result = await this.openaiProvider.generateJSON<{ tasks: any[] }>(
+        this.systemPrompt,
+        userMessage,
+      );
+
+      // Validate and fix any invalid dates in the additional tasks
+      const validatedTasks = (result.tasks || []).map((task, index) => {
+        let validDueDate: string;
+
+        try {
+          // Check if dueDate is valid
+          if (
+            !task.dueDate ||
+            task.dueDate.includes('NaN') ||
+            task.dueDate.includes('undefined')
+          ) {
+            // Generate a proper date based on last date + index
+            const baseDate = new Date(lastDate);
+            baseDate.setDate(baseDate.getDate() + index + 1);
+            validDueDate = baseDate.toISOString().split('T')[0];
+          } else {
+            // Test if the date is parseable
+            const testDate = new Date(task.dueDate);
+            if (isNaN(testDate.getTime())) {
+              // Generate fallback date
+              const baseDate = new Date(lastDate);
+              baseDate.setDate(baseDate.getDate() + index + 1);
+              validDueDate = baseDate.toISOString().split('T')[0];
+            } else {
+              validDueDate = task.dueDate;
+            }
+          }
+        } catch (error) {
+          // Fallback date generation
+          const baseDate = new Date(lastDate);
+          baseDate.setDate(baseDate.getDate() + index + 1);
+          validDueDate = baseDate.toISOString().split('T')[0];
+        }
+
+        return {
+          ...task,
+          dueDate: validDueDate,
+          estimatedHours:
+            typeof task.estimatedHours === 'number' &&
+            !isNaN(task.estimatedHours)
+              ? Math.max(0.5, Math.min(4, task.estimatedHours))
+              : 2,
+          priority: ['high', 'medium', 'low'].includes(task.priority)
+            ? task.priority
+            : 'medium',
+          title: task.title || `Additional Task ${index + 1}`,
+          description:
+            task.description || `Additional development task ${index + 1}`,
+          linkedGoal:
+            task.linkedGoal || okrs[0]?.objective || 'General Development',
+          resources: Array.isArray(task.resources)
+            ? task.resources
+            : ['Documentation', 'Online tutorials'],
+        };
+      });
+
+      return validatedTasks;
+    } catch (error) {
+      console.error('Error generating additional tasks:', error);
+      // Return fallback tasks if AI generation fails
+      return this.generateFallbackAdditionalTasks(count, lastDate, okrs);
+    }
+  }
+
+  private generateFallbackAdditionalTasks(
+    count: number,
+    lastDate: Date,
+    okrs: any[],
+  ): any[] {
+    const tasks: any[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const taskDate = new Date(lastDate);
+      taskDate.setDate(taskDate.getDate() + i + 1);
+
+      tasks.push({
+        title: `Fallback Task ${i + 1}`,
+        description: `Fallback development task. Complete learning activity related to your objectives.`,
+        dueDate: taskDate.toISOString().split('T')[0],
+        estimatedHours: 2,
+        priority: 'medium',
+        linkedGoal: okrs[0]?.objective || 'General Development',
+        resources: ['Documentation', 'Online tutorials'],
+      });
+    }
+
+    return tasks;
   }
 
   /**
@@ -198,5 +457,159 @@ Suggest task adjustments to:
       this.systemPrompt,
       userMessage,
     );
+  }
+
+  /**
+   * Generate tasks in chunks to ensure we get exactly 180 tasks
+   * This is a fallback method if the primary generation doesn't produce enough tasks
+   */
+  async generateDailyTasksChunked(
+    okrs: {
+      objective: string;
+      keyResults: string[];
+      timeline: string;
+    }[],
+  ): Promise<DailyTasksOutput> {
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 6);
+
+    // Define the exact week distribution
+    const phases = [
+      { name: 'FOUNDATION', weeks: [1, 2], taskCount: 14 },
+      { name: 'CORE_SKILLS', weeks: [3, 4, 5, 6], taskCount: 28 },
+      { name: 'INTERMEDIATE', weeks: [7, 8, 9, 10, 11, 12, 13], taskCount: 49 },
+      { name: 'ADVANCED', weeks: [14, 15, 16, 17, 18, 19, 20], taskCount: 49 },
+      { name: 'MASTERY', weeks: [21, 22, 23, 24, 25, 26], taskCount: 40 },
+    ];
+
+    let allTasks: any[] = [];
+    let currentWeek = 1;
+
+    for (const phase of phases) {
+      const phaseStartDate = new Date(startDate);
+      phaseStartDate.setDate(
+        phaseStartDate.getDate() + (phase.weeks[0] - 1) * 7,
+      );
+
+      const phaseEndDate = new Date(startDate);
+      phaseEndDate.setDate(
+        phaseEndDate.getDate() + phase.weeks[phase.weeks.length - 1] * 7,
+      );
+
+      const phasePrompt = `
+Generate exactly ${phase.taskCount} tasks for the ${phase.name} phase (Weeks ${phase.weeks.join('-')}).
+
+Phase Details:
+- ${phase.name}: ${this.getPhaseDescription(phase.name)}
+- Tasks needed: ${phase.taskCount}
+- Start date: ${phaseStartDate.toISOString().split('T')[0]}
+- End date: ${phaseEndDate.toISOString().split('T')[0]}
+
+Objectives:
+${okrs.map((okr) => `- ${okr.objective}: ${okr.keyResults.join(', ')}`).join('\n')}
+
+Return JSON:
+{
+  "tasks": [
+    // Exactly ${phase.taskCount} tasks for this phase
+  ]
+}
+      `;
+
+      try {
+        const phaseResult = await this.openaiProvider.generateJSON<{
+          tasks: any[];
+        }>(this.systemPrompt, phasePrompt);
+
+        if (phaseResult.tasks && Array.isArray(phaseResult.tasks)) {
+          // Ensure we have exactly the right number of tasks for this phase
+          const phaseTasks = phaseResult.tasks.slice(0, phase.taskCount);
+
+          // If we don't have enough, generate more
+          while (phaseTasks.length < phase.taskCount) {
+            const additionalCount = phase.taskCount - phaseTasks.length;
+            const additionalTasks = await this.generateAdditionalTasks(
+              okrs,
+              additionalCount,
+              phaseTasks,
+            );
+            phaseTasks.push(...additionalTasks.slice(0, additionalCount));
+          }
+
+          allTasks.push(...phaseTasks);
+        }
+      } catch (error) {
+        console.error(`Error generating tasks for ${phase.name}:`, error);
+        // Generate fallback tasks for this phase
+        const fallbackTasks = this.generateFallbackTasks(phase, okrs);
+        allTasks.push(...fallbackTasks);
+      }
+
+      currentWeek = phase.weeks[phase.weeks.length - 1] + 1;
+    }
+
+    // Ensure we have exactly 180 tasks
+    allTasks = allTasks.slice(0, 180);
+
+    // If we still don't have enough, pad with additional tasks
+    while (allTasks.length < 180) {
+      const additionalTasks = await this.generateAdditionalTasks(
+        okrs,
+        180 - allTasks.length,
+        allTasks,
+      );
+      allTasks.push(...additionalTasks);
+    }
+
+    return {
+      tasks: allTasks.slice(0, 180), // Ensure exactly 180
+      schedule: this.generateScheduleSummary(phases),
+      summary: `Successfully generated 180 tasks across 26 weeks in 5 phases: Foundation (14), Core Skills (28), Intermediate (49), Advanced (49), and Mastery (40) phases.`,
+    };
+  }
+
+  private getPhaseDescription(phaseName: string): string {
+    const descriptions = {
+      FOUNDATION: 'Environment setup, basic learning, tool familiarization',
+      CORE_SKILLS:
+        'Fundamental practice, essential concepts, foundation building',
+      INTERMEDIATE:
+        'Real-world applications, complex problems, skill integration',
+      ADVANCED: 'System design, optimization, advanced implementations',
+      MASTERY: 'Leadership, mentoring, final projects, retrospectives',
+    };
+    return descriptions[phaseName] || 'Development tasks';
+  }
+
+  private generateFallbackTasks(phase: any, okrs: any[]): any[] {
+    const tasks: any[] = [];
+    const startDate = new Date();
+
+    for (let i = 0; i < phase.taskCount; i++) {
+      const taskDate = new Date(startDate);
+      taskDate.setDate(taskDate.getDate() + (phase.weeks[0] - 1) * 7 + i);
+
+      tasks.push({
+        title: `${phase.name} Task ${i + 1}`,
+        description: `Fallback task for ${phase.name} phase. Complete development activity related to your learning objectives.`,
+        dueDate: taskDate.toISOString().split('T')[0],
+        estimatedHours: 2,
+        priority: 'medium',
+        linkedGoal: okrs[0]?.objective || 'General Development',
+        resources: ['Documentation', 'Online tutorials'],
+      });
+    }
+
+    return tasks;
+  }
+
+  private generateScheduleSummary(phases: any[]): string {
+    return phases
+      .map(
+        (phase) =>
+          `${phase.name}: Weeks ${phase.weeks.join('-')} (${phase.taskCount} tasks)`,
+      )
+      .join(', ');
   }
 }

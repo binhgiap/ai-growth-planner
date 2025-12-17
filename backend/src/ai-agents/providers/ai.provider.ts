@@ -192,10 +192,13 @@ export class AIProvider {
       model: this.getModel(),
       temperature,
       response_format: { type: 'json_object' },
+      max_tokens: 16000, // Increase for large task lists
       messages: [
         {
           role: 'system',
-          content: systemPrompt,
+          content:
+            systemPrompt +
+            '\n\nIMPORTANT: You MUST return valid JSON format. Your response will be parsed as JSON.',
         },
         {
           role: 'user',
@@ -205,7 +208,13 @@ export class AIProvider {
     });
 
     const content = response.choices[0]?.message?.content || '{}';
-    return JSON.parse(content) as T;
+
+    try {
+      return JSON.parse(content) as T;
+    } catch (error) {
+      this.logger.error('Failed to parse JSON response:', content);
+      throw new BadRequestException('AI returned invalid JSON response');
+    }
   }
 
   private async *generateStreamOpenAI(

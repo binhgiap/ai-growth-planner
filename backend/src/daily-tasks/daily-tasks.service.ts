@@ -7,6 +7,10 @@ import {
   UpdateDailyTaskDto,
   DailyTaskResponseDto,
 } from './dto/create-daily-task.dto';
+import {
+  notDeleted,
+  buildNotDeletedWhere,
+} from '@common/helpers/soft-delete.helper';
 
 /**
  * DailyTaskService handles daily task management
@@ -48,11 +52,10 @@ export class DailyTaskService {
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         user_id: userId,
         dueDate: Between(today, tomorrow),
-        deletedAt: IsNull(),
-      },
+      }),
       order: { priority: 'ASC', createdAt: 'DESC' },
     });
 
@@ -68,11 +71,10 @@ export class DailyTaskService {
     endDate: Date,
   ): Promise<DailyTaskResponseDto[]> {
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         user_id: userId,
         dueDate: Between(startDate, endDate),
-        deletedAt: IsNull(),
-      },
+      }),
       order: { dueDate: 'ASC', priority: 'ASC' },
     });
 
@@ -109,11 +111,10 @@ export class DailyTaskService {
     userId: string,
   ): Promise<DailyTaskResponseDto[]> {
     const tasks = await this.tasksRepository.find({
-      where: {
+      where: buildNotDeletedWhere({
         goal_id: goalId,
         user_id: userId,
-        deletedAt: IsNull(),
-      },
+      }),
       order: { dueDate: 'ASC' },
     });
 
@@ -222,6 +223,30 @@ export class DailyTaskService {
       completionPercentage:
         tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0,
     };
+  }
+
+  /**
+   * Delete all active tasks for a user (soft delete)
+   * Used when cancelling a plan
+   */
+  async deleteAllActiveTasks(userId: string): Promise<number> {
+    const now = new Date();
+    const activeTasks = await this.tasksRepository
+      .createQueryBuilder('task')
+      .where('task.user_id = :userId', { userId })
+      .andWhere('task.dueDate > :now', { now })
+      .andWhere('task.deletedAt IS NULL')
+      .getMany();
+
+    const deletedCount = activeTasks.length;
+
+    // Soft delete all active tasks
+    for (const task of activeTasks) {
+      task.deletedAt = now;
+      await this.tasksRepository.save(task);
+    }
+
+    return deletedCount;
   }
 
   /**
