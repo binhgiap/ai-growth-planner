@@ -18,7 +18,7 @@ const UserDashboard = () => {
   const [growthPlan, setGrowthPlan] = useState<GrowthPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<{ currentRole: string; targetRole: string; currentLevel?: string; targetLevel?: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ bio: string; currentRole: string; targetRole: string; } | null>(null);
   const { toast } = useToast();
   const hasCheckedGoals = useRef(false);
 
@@ -77,6 +77,7 @@ const UserDashboard = () => {
               lastName: string;
               currentRole: string;
               targetRole: string;
+              bio?: string;
               hoursPerWeek?: number;
             };
             goals?: unknown[];
@@ -86,11 +87,18 @@ const UserDashboard = () => {
           };
           
           if (profileData.user) {
+            // Extract data from profile API:
+            // - bio: role (e.g., "Data Scientist")
+            // - currentRole: current level (e.g., "Senior")
+            // - targetRole: target level (e.g., "Lead")
+            const bio = profileData.user.bio || "";
+            const currentRole = profileData.user.currentRole || "";
+            const targetRole = profileData.user.targetRole || "";
+            
             setUserInfo({
-              currentRole: profileData.user.currentRole || "",
-              targetRole: profileData.user.targetRole || "",
-              currentLevel: "", // Levels not available in User entity yet
-              targetLevel: "", // Levels not available in User entity yet
+              currentRole, // Role from bio (e.g., "Data Scientist")
+              targetRole, // Same role (for display consistency)
+              bio, // Current level from currentRole field (e.g., "Senior")
             });
           }
         }
@@ -100,6 +108,7 @@ const UserDashboard = () => {
         setUserInfo({
           currentRole: user.currentRole || "",
           targetRole: user.targetRole || "",
+          bio: user.bio || "",
         });
       }
       
@@ -142,9 +151,43 @@ const UserDashboard = () => {
     setAppState("onboarding");
   };
 
-  const handleOnboardingSubmit = (profile: UserProfile) => {
-    setUserProfile(profile);
-    setAppState("processing");
+  const handleOnboardingSubmit = async (profile: UserProfile) => {
+    // Get current user
+    const userStr = localStorage.getItem("user");
+    const user = userStr ? JSON.parse(userStr) : null;
+    const userId = user?.id;
+
+    if (!userId) {
+      setError("User ID not found. Please log in again.");
+      return;
+    }
+
+    try {
+      // Update user profile with role information before creating plan
+      // Only update: bio, currentRole, and targetRole
+      const updateData = {
+        bio: profile.role || "",
+        currentRole: profile.currentLevel || "",
+        targetRole: profile.targetLevel || "",
+      };
+
+      console.log(`[API] Updating user profile before creating plan:`, updateData);
+      const updateResponse = await usersApi.update(userId, updateData);
+      
+      if (updateResponse.success) {
+        console.log(`[API] User profile updated successfully`);
+        // Set user profile and proceed to processing
+        setUserProfile(profile);
+        setAppState("processing");
+      } else {
+        throw new Error("Failed to update user profile");
+      }
+    } catch (error) {
+      console.error("Failed to update user profile:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile. Please try again.";
+      setError(errorMessage);
+      // Don't proceed to processing if update fails
+    }
   };
 
   const handleProcessingError = (error: string, agentId: string) => {

@@ -17,7 +17,7 @@ import type { Goal } from "@/lib/api/goals";
 interface DashboardOverviewProps {
   plan: GrowthPlan;
   onUpdateTask: (taskId: string, completed: boolean) => void;
-  userInfo?: { currentRole: string; targetRole: string; currentLevel?: string; targetLevel?: string } | null;
+  userInfo?: { bio: string; currentRole: string; targetRole: string; } | null;
 }
 
 export const DashboardOverview = ({ plan, onUpdateTask, userInfo }: DashboardOverviewProps) => {
@@ -167,9 +167,8 @@ export const DashboardOverview = ({ plan, onUpdateTask, userInfo }: DashboardOve
                 AI Growth Planner
               </h1>
               <p className="text-xs md:text-sm text-muted-foreground truncate">
-                {userInfo 
-                  ? `${userInfo.currentRole}${userInfo.currentLevel ? ` • ${userInfo.currentLevel}` : ""} → ${userInfo.targetLevel || userInfo.targetRole || ""}`
-                  : `${plan.profile.role} • ${plan.profile.currentLevel} → ${plan.profile.targetLevel}`
+              {userInfo 
+                  && `${userInfo.bio || ""}${` • ${userInfo.currentRole || ""}`} → ${userInfo.targetRole || ""}`
                 }
               </p>
             </div>
