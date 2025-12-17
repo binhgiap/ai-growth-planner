@@ -225,6 +225,30 @@ export class DailyTaskService {
   }
 
   /**
+   * Delete all active tasks for a user (soft delete)
+   * Used when cancelling a plan
+   */
+  async deleteAllActiveTasks(userId: string): Promise<number> {
+    const now = new Date();
+    const activeTasks = await this.tasksRepository
+      .createQueryBuilder('task')
+      .where('task.user_id = :userId', { userId })
+      .andWhere('task.dueDate > :now', { now })
+      .andWhere('task.deletedAt IS NULL')
+      .getMany();
+
+    const deletedCount = activeTasks.length;
+
+    // Soft delete all active tasks
+    for (const task of activeTasks) {
+      task.deletedAt = now;
+      await this.tasksRepository.save(task);
+    }
+
+    return deletedCount;
+  }
+
+  /**
    * Map DailyTask entity to DTO
    */
   private mapToDto(task: DailyTask): DailyTaskResponseDto {

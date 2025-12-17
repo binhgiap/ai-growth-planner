@@ -167,6 +167,59 @@ export class GoalService {
   }
 
   /**
+   * Check if user has an active plan (goals with targetDate in the future)
+   * Returns true if user has active plan, false otherwise
+   */
+  async hasActivePlan(userId: string): Promise<boolean> {
+    const now = new Date();
+    const activeGoals = await this.goalsRepository
+      .createQueryBuilder('goal')
+      .where('goal.user_id = :userId', { userId })
+      .andWhere('goal.targetDate > :now', { now })
+      .andWhere('goal.deletedAt IS NULL')
+      .getCount();
+
+    return activeGoals > 0;
+  }
+
+  /**
+   * Get the most recent plan (latest goal by startDate)
+   * Used to check if the previous plan has expired
+   */
+  async getLatestPlan(userId: string): Promise<Goal | null> {
+    return this.goalsRepository
+      .createQueryBuilder('goal')
+      .where('goal.user_id = :userId', { userId })
+      .andWhere('goal.deletedAt IS NULL')
+      .orderBy('goal.startDate', 'DESC')
+      .getOne();
+  }
+
+  /**
+   * Delete all active goals for a user (soft delete)
+   * Used when cancelling a plan
+   */
+  async deleteAllActiveGoals(userId: string): Promise<number> {
+    const now = new Date();
+    const activeGoals = await this.goalsRepository
+      .createQueryBuilder('goal')
+      .where('goal.user_id = :userId', { userId })
+      .andWhere('goal.targetDate > :now', { now })
+      .andWhere('goal.deletedAt IS NULL')
+      .getMany();
+
+    const deletedCount = activeGoals.length;
+
+    // Soft delete all active goals
+    for (const goal of activeGoals) {
+      goal.deletedAt = now;
+      await this.goalsRepository.save(goal);
+    }
+
+    return deletedCount;
+  }
+
+  /**
    * Map Goal entity to DTO
    */
   private mapToDto(goal: Goal): GoalResponseDto {

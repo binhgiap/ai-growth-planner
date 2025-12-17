@@ -32,6 +32,9 @@ export class PlanningService {
     try {
       this.logger.log(`Analyzing skill gaps for user ${userId}`);
 
+      // Check if user can create a new plan
+      await this.validateCanCreatePlan(userId);
+
       // Get user profile
       const user = await this.userService.findById(userId);
       if (!user) {
@@ -285,6 +288,77 @@ export class PlanningService {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       this.logger.error(`Error generating daily tasks: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate if user can create a new plan
+   * User can only create a plan if:
+   * 1. No plan exists yet, OR
+   * 2. Previous plan has expired (targetDate is in the past)
+   */
+  private async validateCanCreatePlan(userId: string): Promise<void> {
+    // Check if user has an active plan
+    const hasActivePlan = await this.goalService.hasActivePlan(userId);
+    
+    if (hasActivePlan) {
+      // Get the latest plan to provide more information
+      const latestPlan = await this.goalService.getLatestPlan(userId);
+      const expiryDate = latestPlan?.targetDate 
+        ? new Date(latestPlan.targetDate).toLocaleDateString('vi-VN')
+        : 'unknown';
+      
+      throw new BadRequestException(
+        `Bạn đã có một kế hoạch đang hoạt động. Kế hoạch hiện tại sẽ kết thúc vào ${expiryDate}. Bạn chỉ có thể tạo kế hoạch mới sau khi kế hoạch hiện tại hết hạn.`
+      );
+    }
+
+    this.logger.log(`User ${userId} is eligible to create a new plan`);
+  }
+
+  /**
+   * Cancel current active plan
+   * Soft deletes all active goals and daily tasks for the user
+   */
+  async cancelCurrentPlan(userId: string): Promise<Record<string, unknown>> {
+    try {
+      this.logger.log(`Cancelling current plan for user ${userId}`);
+
+      // Check if user has an active plan
+      const hasActivePlan = await this.goalService.hasActivePlan(userId);
+      
+      if (!hasActivePlan) {
+        throw new BadRequestException(
+          'Không tìm thấy kế hoạch đang hoạt động để hủy.'
+        );
+      }
+
+      // Get plan info before deletion
+      const latestPlan = await this.goalService.getLatestPlan(userId);
+      
+      // Delete all active goals
+      const deletedGoalsCount = await this.goalService.deleteAllActiveGoals(userId);
+      
+      // Delete all active daily tasks
+      const deletedTasksCount = await this.dailyTaskService.deleteAllActiveTasks(userId);
+
+      this.logger.log(
+        `Successfully cancelled plan for user ${userId}: ${deletedGoalsCount} goals and ${deletedTasksCount} tasks deleted`,
+      );
+
+      return {
+        userId,
+        deletedGoals: deletedGoalsCount,
+        deletedTasks: deletedTasksCount,
+        previousPlanEndDate: latestPlan?.targetDate,
+        cancelledAt: new Date(),
+        message: 'Kế hoạch đã được hủy thành công. Bạn có thể tạo kế hoạch mới.',
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error cancelling plan: ${errorMessage}`);
       throw error;
     }
   }
