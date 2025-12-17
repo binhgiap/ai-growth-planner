@@ -187,4 +187,12 @@ export class UserResponseDto {
   bio: string;
   createdAt: Date;
   updatedAt: Date;
+  nfts?: {
+    tokenId: string | null;
+    contractAddress: string;
+    txHash: string;
+    description: string;
+    userInfo: string;
+    mintedAt: Date | null;
+  }[];
 }

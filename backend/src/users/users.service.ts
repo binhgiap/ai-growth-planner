@@ -61,6 +61,7 @@ export class UserService {
       skip: (page - 1) * limit,
       take: limit,
       where: { deletedAt: IsNull() },
+      relations: ['nfts'],
     });
 
     return {
@@ -251,6 +252,17 @@ export class UserService {
    * Map User entity to DTO
    */
   private mapToDto(user: User): UserResponseDto {
+    const nfts =
+      user?.nfts && user?.nfts.length > 0
+        ? user.nfts.map((nft) => ({
+            tokenId: nft.tokenId,
+            contractAddress: nft.contractAddress,
+            txHash: nft.txHash,
+            description: nft.description,
+            userInfo: nft.userInfo,
+            mintedAt: nft.mintedAt,
+          }))
+        : [];
     return {
       id: user.id,
       email: user.email,
@@ -264,6 +276,7 @@ export class UserService {
       bio: user.bio,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      nfts,
     };
   }
 
