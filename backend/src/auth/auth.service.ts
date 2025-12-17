@@ -24,8 +24,15 @@ export class AuthService {
    * Register a new user
    */
   async register(registerDto: RegisterDto) {
-    const { email, password, firstName, lastName, currentRole, targetRole } =
-      registerDto;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      currentRole,
+      targetRole,
+      walletAddress,
+    } = registerDto;
 
     // Check if user already exists
     const existingUser = await this.userService.findByEmail(email);
@@ -44,6 +51,7 @@ export class AuthService {
       lastName,
       currentRole,
       targetRole,
+      walletAddress,
     });
 
     // Generate JWT token

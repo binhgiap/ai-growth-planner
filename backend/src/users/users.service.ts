@@ -118,6 +118,7 @@ export class UserService {
     lastName: string;
     currentRole?: string;
     targetRole?: string;
+    walletAddress?: string;
   }): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
       where: { email: userData.email, deletedAt: IsNull() },
@@ -134,6 +135,7 @@ export class UserService {
       lastName: userData.lastName,
       currentRole: userData.currentRole,
       targetRole: userData.targetRole,
+      walletAddress: userData.walletAddress,
       skills: [],
       targetSkills: [],
       hoursPerWeek: 40,
