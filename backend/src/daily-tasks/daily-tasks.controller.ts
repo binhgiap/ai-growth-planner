@@ -25,9 +25,11 @@ import {
   CreateDailyTaskDto,
   UpdateDailyTaskDto,
 } from './dto/create-daily-task.dto';
-import { JwtAuthGuard } from '@auth/guards/auth.guard';
+import { JwtAuthGuard, RolesGuard } from '@auth/guards/auth.guard';
 import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
+import { UserRole } from '@/users/entities/user.entity';
+import { Roles } from '@auth/decorators/roles.decorator';
 
 /**
  * DailyTaskController handles HTTP requests for daily task management
@@ -232,6 +234,40 @@ export class DailyTaskController {
     @Query('status') status?: string,
   ) {
     const tasks = await this.dailyTaskService.findByUserId(user.id, status);
+    return {
+      success: true,
+      data: tasks as unknown,
+      count: tasks.length,
+    };
+  }
+
+  /**
+   * GET /daily-tasks - Get all tasks for a user admin
+   */
+  @Get('/user')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all tasks for a user admin' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: 'string',
+    description: 'Filter by status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Tasks retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async findByUserAdmin(
+    @Query('status') status?: string,
+    @Query('userId') userId?: string,
+  ) {
+    const tasks = await this.dailyTaskService.findByUserId(userId!, status);
     return {
       success: true,
       data: tasks as unknown,
