@@ -1,0 +1,739 @@
+openapi: 3.0.3
+info:
+  title: AI Growth Planner API
+  description: >
+    REST API cho AI Growth Planner – tạo lộ trình phát triển 6 tháng bằng
+    multi-agent AI, theo dõi tiến độ và mint NFT trên Hedera.
+  version: "1.0.0"
+servers:
+  - url: https://ai-growth-planner-backend.onrender.com/api
+    description: Production
+tags:
+  - name: auth
+    description: Authentication & JWT
+  - name: users
+    description: User management & admin views
+  - name: nft
+    description: NFT cron and manual triggers
+paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDto"
+      responses:
+        "201":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccess"
+        "400":
+          description: Email already registered or validation error
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginDto"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccess"
+        "401":
+          description: Invalid email or password
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: Get current authenticated user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMe"
+        "401":
+          description: Unauthorized
+  /auth/change-password:
+    post:
+      tags:
+        - auth
+      summary: Change user password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordDto"
+      responses:
+        "200":
+          description: Password changed successfully
+        "401":
+          description: Unauthorized or invalid current password
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Refresh JWT token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthRefresh"
+        "401":
+          description: Unauthorized
+  /users:
+    get:
+      tags:
+        - users
+      summary: Get all users (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedUsers"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - Admin role required
+    post:
+      tags:
+        - users
+      summary: Create a new user (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserDto"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseWrapper"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - Admin role required
+  /users/{id}:
+    get:
+      tags:
+        - users
+      summary: Get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: User retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseDto"
+        "404":
+          description: User not found
+    patch:
+      tags:
+        - users
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserDto"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseWrapper"
+        "404":
+          description: User not found
+    delete:
+      tags:
+        - users
+      summary: Soft delete user (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: User deleted
+        "404":
+          description: User not found
+  /users/profile/{id}:
+    get:
+      tags:
+        - users
+      summary: Get user profile with related data (includes NFTs)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        "404":
+          description: User not found
+  /users/top-nft-holders:
+    get:
+      tags:
+        - users
+      summary: Get top NFT holders leaderboard
+      responses:
+        "200":
+          description: Top NFT holders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserLeaderboardItem"
+  /users/details/{id}:
+    get:
+      tags:
+        - users
+      summary: Get detailed user info for admin portal (TeamMember shape)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: User details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMember"
+        "404":
+          description: User not found
+  /nft/mint:
+    post:
+      tags:
+        - nft
+      summary: Manually trigger NFT mint job (same as cron)
+      responses:
+        "200":
+          description: Mint job completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  totalMinted:
+                    type: integer
+  /nft/pending-count:
+    get:
+      tags:
+        - nft
+      summary: Get count of completed goals pending NFT minting
+      responses:
+        "200":
+          description: Pending count retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  pendingCount:
+                    type: integer
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterDto:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          minLength: 8
+          example: Password123!
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        currentRole:
+          type: string
+          example: Software Engineer
+        targetRole:
+          type: string
+          example: Senior Engineer
+        walletAddress:
+          type: string
+          example: "0x123..."
+    LoginDto:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    ChangePasswordDto:
+      type: object
+      required:
+        - oldPassword
+        - newPassword
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - user
+            - manager
+        createdAt:
+          type: string
+          format: date-time
+    AuthSuccess:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            user:
+              $ref: "#/components/schemas/AuthUser"
+    AuthMe:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AuthUser"
+    AuthRefresh:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+    CreateUserDto:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        currentRole:
+          type: string
+        targetRole:
+          type: string
+        walletAddress:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - user
+            - manager
+    UpdateUserDto:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+        currentRole:
+          type: string
+        targetRole:
+          type: string
+        walletAddress:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - user
+            - manager
+    UserResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        currentRole:
+          type: string
+        targetRole:
+          type: string
+        hoursPerWeek:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        nfts:
+          type: array
+          items:
+            $ref: "#/components/schemas/NftMint"
+    UserResponseWrapper:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/UserResponseDto"
+    UserProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/UserResponseDto"
+            goals:
+              type: array
+              items:
+                type: object
+            tasksCount:
+              type: integer
+            progressLogs:
+              type: array
+              items:
+                type: object
+            nfts:
+              type: array
+              items:
+                $ref: "#/components/schemas/NftMintLight"
+    UserLeaderboardItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        department:
+          type: string
+          nullable: true
+        profile:
+          type: object
+          properties:
+            role:
+              type: string
+              nullable: true
+            currentLevel:
+              type: string
+              nullable: true
+            dailyTime:
+              type: number
+              nullable: true
+            targetGoal:
+              type: string
+              nullable: true
+            targetLevel:
+              type: string
+              nullable: true
+        growthPlan:
+          type: string
+          nullable: true
+        joinedAt:
+          type: string
+          format: date-time
+        lastActive:
+          type: string
+          format: date-time
+        nftCount:
+          type: integer
+        nfts:
+          type: array
+          items:
+            $ref: "#/components/schemas/NftMintLight"
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        department:
+          type: string
+        profile:
+          $ref: "#/components/schemas/TeamMemberProfile"
+        growthPlan:
+          type: string
+          nullable: true
+          example: null
+        joinedAt:
+          type: string
+          format: date-time
+        lastActive:
+          type: string
+          format: date-time
+        nftCount:
+          type: integer
+        nfts:
+          type: array
+          items:
+            $ref: "#/components/schemas/NFT"
+    TeamMemberProfile:
+      type: object
+      properties:
+        role:
+          type: string
+        currentLevel:
+          type: string
+        dailyTime:
+          type: number
+          description: hours per day
+        targetGoal:
+          type: string
+        targetLevel:
+          type: string
+    NFT:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum:
+            - okr
+            - consistency
+            - skill
+            - milestone
+        earnedAt:
+          type: string
+          format: date-time
+        blockchainHash:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+    NftMint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tokenId:
+          type: string
+          nullable: true
+        txHash:
+          type: string
+        contractAddress:
+          type: string
+        description:
+          type: string
+        userInfo:
+          type: string
+        completionTimestamp:
+          type: string
+          nullable: true
+        mintedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    NftMintLight:
+      type: object
+      properties:
+        tokenId:
+          type: string
+          nullable: true
+        contractAddress:
+          type: string
+        txHash:
+          type: string
+        description:
+          type: string
+        userInfo:
+          type: string
+        mintedAt:
+          type: string
+          format: date-time
+          nullable: true
+    PaginatedUsers:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserResponseDto"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+
