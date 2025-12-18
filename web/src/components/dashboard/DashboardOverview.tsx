@@ -167,7 +167,7 @@ export const DashboardOverview = ({ plan, onUpdateTask, userInfo }: DashboardOve
                 AI Growth Planner
               </h1>
               <p className="text-xs md:text-sm text-muted-foreground truncate">
-              {userInfo 
+                {userInfo 
                   && `${userInfo.bio || ""}${` • ${userInfo.currentRole || ""}`} → ${userInfo.targetRole || ""}`
                 }
               </p>

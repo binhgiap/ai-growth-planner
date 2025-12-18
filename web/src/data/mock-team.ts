@@ -191,21 +191,37 @@ export const generateDepartmentSummaries = (members: TeamMember[]): DepartmentSu
   });
 
   return Array.from(deptMap.entries()).map(([name, deptMembers]) => {
-    const avgProgress = deptMembers.reduce((acc, m) => {
-      if (!m.growthPlan) return acc;
-      const completed = m.growthPlan.dailyTasks.filter(t => t.completed).length;
-      return acc + (completed / m.growthPlan.dailyTasks.length) * 100;
-    }, 0) / deptMembers.length;
+    // Calculate average progress - only count members with valid growth plans and tasks
+    let totalProgress = 0;
+    let validMembersCount = 0;
+    
+    deptMembers.forEach(m => {
+      if (m.growthPlan && m.growthPlan.dailyTasks.length > 0) {
+        const completed = m.growthPlan.dailyTasks.filter(t => t.completed).length;
+        const progress = (completed / m.growthPlan.dailyTasks.length) * 100;
+        if (isFinite(progress) && !isNaN(progress)) {
+          totalProgress += progress;
+          validMembersCount++;
+        }
+      }
+    });
+    
+    const avgProgress = validMembersCount > 0 ? totalProgress / validMembersCount : 0;
+    const safeAvgProgress = isNaN(avgProgress) || !isFinite(avgProgress) ? 0 : Math.max(0, Math.min(100, avgProgress));
 
-    const avgConsistency = deptMembers.reduce((acc, m) => 
-      acc + (m.growthPlan?.consistencyScore || 0), 0
-    ) / deptMembers.length;
+    // Calculate average consistency
+    const consistencySum = deptMembers.reduce((acc, m) => {
+      const score = m.growthPlan?.consistencyScore || 0;
+      return acc + (isNaN(score) || !isFinite(score) ? 0 : score);
+    }, 0);
+    const avgConsistency = deptMembers.length > 0 ? consistencySum / deptMembers.length : 0;
+    const safeAvgConsistency = isNaN(avgConsistency) || !isFinite(avgConsistency) ? 0 : Math.max(0, Math.min(100, avgConsistency));
 
     return {
       name,
       memberCount: deptMembers.length,
-      avgProgress: Math.round(avgProgress),
-      avgConsistency: Math.round(avgConsistency),
+      avgProgress: Math.round(safeAvgProgress),
+      avgConsistency: Math.round(safeAvgConsistency),
     };
   });
 };
