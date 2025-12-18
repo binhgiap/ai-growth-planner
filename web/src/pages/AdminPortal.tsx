@@ -73,11 +73,11 @@ const AdminPortal = () => {
             
             // Create user profile from API user data
             const userProfile: UserProfile = {
-              role: apiUser.currentRole || "",
-              currentLevel: "Middle", // Default - could be extracted from role if available
+              role: apiUser.bio || "",
+              currentLevel: apiUser.currentRole || "", // Default - could be extracted from role if available
               dailyTime: apiUser.hoursPerWeek ? apiUser.hoursPerWeek / 7 : 2,
               targetGoal: apiUser.targetRole || "",
-              targetLevel: "Senior", // Default - could be extracted from targetRole if available
+              targetLevel: apiUser.targetRole || "", // Default - could be extracted from targetRole if available
             };
             
             // Load growth plan from API (goals + tasks)

@@ -178,8 +178,8 @@ export const MemberDetailView = ({ member, onBack }: MemberDetailViewProps) => {
   }, [member.id]);
 
   // Use refreshed member data if available, otherwise fall back to original member
-  const displayMember = refreshedMember || member;
-  const plan = displayMember.growthPlan;
+  const displayMember = member || refreshedMember;
+  const plan = displayMember?.growthPlan;
   
   if (isLoadingProfile) {
     return (
