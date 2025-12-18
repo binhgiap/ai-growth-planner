@@ -145,7 +145,7 @@ const UserDashboard = () => {
     };
 
     loadPlan();
-  }, []);
+  }, [hasCheckedGoals.current, appState]);
 
   const handleGetStarted = () => {
     setAppState("onboarding");
